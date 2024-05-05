@@ -340,7 +340,10 @@ The final implementation of PowerInfer has shown remarkable effectiveness. When 
 
 PowerInfer's approach is novel, particularly in its prediction of cold and hot neurons, which offers an innovative perspective. The demonstration results are quite impressive, showcasing significant speed improvements. However, the practicality of this approach still needs improvement. Its model adaptability is somewhat cumbersome, as it is only suitable for models using the ReLU activation function. Models utilizing SILU activation require fine-tuning for a ReLU version. Additionally, this method is lossy, which raises questions about its compatibility with further developments in quantization. Whether PowerInfer can coexist with quantization is also a worthwhile consideration.
 
-\section*{Acknowledgment}
+\section{Conclusion}
+In the resource management of Large Language Models (LLMs), optimization of memory and computational resources constrains each other. Among the various optimization methods for both memory and computational resources mentioned above, the optimization of one often leads to redundancy in the other. In many cases, it is necessary to decide whether to use specific optimization methods based on the specific application scenarios and requirements of the model. We also look forward to more advanced hardware support and design optimization in the future to overcome this dilemma.
+
+\section{Acknowledgment}
 
 \begin{thebibliography}{00}
     \bibitem{b1} Kwon W, Li Z, Zhuang S, et al. Efficient memory management for large language model serving with pagedattention[C]//Proceedings of the 29th Symposium on Operating Systems Principles. 2023: 611-626.
