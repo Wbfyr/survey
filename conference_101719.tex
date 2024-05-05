@@ -257,7 +257,7 @@ time (i.e., the execution time to generate the first output token) is longer tha
 With the advancement of LLMs, both model parameters and training datasets are rapidly becoming enormous. To train a mature large-scale model effectively, it is inevitable to employ multiple GPUs for distributed collaborative training to tackle the massive datasets and model parameters that cannot be accommodated on a single card. The crucial issue for large models is how to utilize multi-GPU resources and coordinate information among multiple GPUs. Distributed training nowadays primarily focuses on parallel training through the following three aspects:
 
 \subsubsection{Data parallelism}
-Data parallelism involves partitioning massive datasets and maintaining complete models on each GPU. The dataset is divided into 𝑛 parts, and each GPU trains a portion to achieve the training effect. Here, we can discuss two methods of data parallelism combined with actual PyTorch code: DP and DDP.
+Data parallelism involves partitioning massive datasets and maintaining complete models on each GPU. The dataset is divided into 𝑛 parts, and each GPU trains a portion to achieve the training effect. Here, we can discuss two methods of data parallelism in PyTorch classes: DP and DDP.
 
 To achieve effective training across multiple GPUs, it implies that there must be a certain level of information exchange and synchronization among the GPUs. In the torch.nn.DataParallel method, each GPU communicates through a server GPU, responsible for interacting with each GPU, handling information exchange, and summarizing data. Specifically, the server GPU needs to aggregate the forward outputs from each GPU to calculate the loss, compute the gradient of the final layer through the loss, distribute this gradient to each GPU, where each GPU conducts backward propagation independently, and finally aggregate the gradients of all parameters for gradient updates.
 
@@ -282,22 +282,21 @@ As models grow larger, a single GPU may not even accommodate a single layer. In 
 A tensor, essentially an n-dimensional matrix, is broken down since computations in frameworks like Transformers mainly involve matrix multiplications with linear relationships between parameters. Thus, the overall matrix is divided and matrix multiplications are performed separately, with results subsequently aggregated.
 Tensor parallelism entails dividing internal matrices of large models, conducting separate computations, and then aggregating or concatenating outputs using techniques like allreduce. This method is prevalent in LLMs, primarily because modern LLMs are predominantly built upon Transformer architectures, which facilitate tensor parallelism. In contrast, for CNNs, the convolution process is more complex, making it challenging to parallelize through simple matrix partitioning. Hence, this stark difference in parameter quantity between LLMs and CNNs is a significant reason for the former's much larger parameter count.
 
-\subsubsection{ZeRO}
+\subsubsection{ZeRO(Zero Redundancy Optimizer)}
 After partitioning and parallelizing datasets and models, as the number of parameters increases, it's evident that certain redundant parts occupy a significant amount of memory. These parts can be further optimized, with one of them being model states.
-Model states primarily consist of three components:1)optimizer states 2)gradient 3)model parameter
-ZeRO (Zero Redundancy Optimizer) technology emerges to address the issue of model states consuming a large amount of memory. ZeRO is divided into three levels: ZeRO-1 handles optimizer states, ZeRO-2 handles optimizer states and gradients, and ZeRO-3 handles all model states.
+Model states primarily consist of three components: 1) optimizer states, 2) gradient, 3) model parameter.
+ZeRO technology emerges to address the issue of model states consuming a large amount of memory. ZeRO is divided into three levels: ZeRO-1 handles optimizer states, ZeRO-2 handles optimizer states and gradients, and ZeRO-3 handles all model states.
 The concept behind ZeRO is relatively straightforward: distribute model states across different GPUs, and during specific steps where complete model states are required, obtain them through allreduce. This increases communication overhead but reduces memory consumption. However, as the number of partitions increases, the corresponding technical intricacies also escalate, and excessive communication may lead to diminishing returns.
 
 \subsubsection{3D Hybrid Parallelism}
 By integrating data parallelism, tensor parallelism, pipeline parallelism, and ZeRO technology, with ZeRO-3 inherently partitioning model parameters, overlapping functionalities with tensor parallelism and pipeline parallelism occur. Meanwhile, ZeRO-2 partitions gradients. Combining ZeRO-2 with pipeline parallelism results in significant communication overhead. Hence, when employing 3D parallelism, it is advisable to combine it with ZeRO-1.
-
 Through the coordinated use of multiple parallel strategies, large model parameters can reach the scale of hundreds of billions.
 
 \subsection{Offloading Inference}
 For large-scale model training networks, inference is undoubtedly much easier compared to training. However, current commercial inference for large models, such as ChatGPT, is conducted on remote servers, with results transmitted back to users over the network. If it were possible to deploy pre-trained large models locally for inference, it would undoubtedly further expand the application of large models, representing a significant step forward.
 
 When it comes to LLM inference, there are three main directions for reducing computation and storage resources:
-1)model compression 2)collaborative inference 3)offloading
+1) model compression 2) collaborative inference 3) offloading.
 Offloading is one aspect to reduce computation and storage resources for LLM inference. it makes full use of various hardware resources, transferring parameters from GPU memory to system memory or even disk storage.
 Let's delve into two models specifically designed for offloading:
 

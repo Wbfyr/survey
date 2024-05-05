@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999995 (TeX Live 2023) (preloaded format=xelatex 2024.3.12)  5 MAY 2024 10:22
+This is XeTeX, Version 3.141592653-2.6-0.999995 (TeX Live 2023) (preloaded format=xelatex 2024.3.12)  5 MAY 2024 10:42
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -633,23 +633,18 @@ Underfull \hbox (badness 3701) in paragraph at lines 269--272
  []
 
 [9]
-Underfull \hbox (badness 2376) in paragraph at lines 286--290
- \TU/lmr/m/it/10.53937 4) ZeRO: [][] \TU/lmr/m/n/10.53937 After partitioning and parallelizing
- []
-
-
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
 File: device fig1.png Graphic file (type bmp)
 <device fig1.png>
  [10]
-Underfull \hbox (badness 4913) in paragraph at lines 328--332
+Underfull \hbox (badness 4913) in paragraph at lines 327--331
 []\TU/lmr/m/n/10.53937 Please number citations consecutively within
  []
 
 
 LaTeX Font Warning: Font shape `TU/SimSun(0)/m/sc' undefined
-(Font)              using `TU/SimSun(0)/m/n' instead on input line 347.
+(Font)              using `TU/SimSun(0)/m/n' instead on input line 346.
 
 [11]
 
