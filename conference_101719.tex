@@ -45,7 +45,11 @@
 \end{IEEEkeywords}
 
 \section{Introduction}
-Advancements in LLMs have unlocked novel opportunities across various domains, catalyzing the emergence of a new era of interactive AI applications. Notably, ChatGPT stands out as a pioneering example, facilitating user interaction with AI agents in a conversational manner to address tasks spanning from language translation to software engineering. The remarkable capabilities of ChatGPT have propelled its rapid adoption, positioning it among the fastest-growing applications in history. Numerous organizations have embraced this trend by introducing LLMs and ChatGPT-like applications, exemplified by initiatives such as Microsoft's New Bing, Google's Bard, Meta's LLaMa, Stanford's Alpaca, Databricks' Dolly, and UC Berkeley's Vicuna, among others.However, as LLM models evolve, the increasing volume of data sets and parameters, coupled with elongated context, leads to augmented memory I/O overhead and necessitates optimization of distributed communication structures. These factors collectively impede the development of LLMs. This paper undertakes an analysis of resource management in LLMs from three perspectives: memory management, process scheduling, and allocation of computational resources. Additionally, various strategies and model methodologies for optimizing LLM memory, communication overhead, and computational costs are discussed.
+The Transformer model has achieved tremendous success in the field of Natural Language Processing (NLP) and has become the foundational architecture for many powerful pre-trained language models, such as BERT and GPT. LLMs typically rely on the Transformer architecture and leverage massive corpora for pre-training to learn rich representations of language. Thus, LLMs can be viewed as specific applications of the Transformer model in NLP tasks.
+
+In the memory management section of this survey, we explore two components: the Key-Value (KV) cache and the long-term memory module. The former represents the most prominent source of memory overhead in LLMs, for which we investigate two classical optimization methods: PagedAttention and Tree Attention. The latter incurs additional memory overhead as context grows, and we discuss it through the lens of a Self-Control Memory model. Common memory optimization techniques in large models, such as model compression and distributed storage, while not unique to LLMs, are not elaborated upon in this survey.
+In the process scheduling section, we illustrate methods for enhancing model inference speed and reducing computational costs using process scheduling from both the Orca and FastServe models. We also analyze the drawbacks associated with these methods, highlighting novel mechanisms and scheduling strategies for detailed discussion.
+In the Computation Resource Management section, this paper examines distributed training and offloading inference from two perspectives. In part A, various parallel optimization schemes existing in distributed training are introduced, including the practical 3D hybrid parallelization widely employed in the industry. Part B discusses current research outcomes in local inference direction through the presentation of two offloading models: FlexGen and PowerInfer.
 
 \section{Memory Management}
 \subsection{Memory Optimization Based on the Attention Algorithm}
@@ -114,7 +118,7 @@ Memory Activation in the Memory Controller relies on prompts to activate histori
 Summaries are employed to represent memories if activated memory tokens exceed 2000 and memory length exceeds 800 tokens, reducing data processing volume and maintaining the model within its maximum input length capacity.
 
 \subsubsection{Personal Extended Ideas}
-Given the extensive range of memory module designs in LLMs, I have not yet fully explored all these designs. Based on my current knowledge and preliminary understanding of this field, here are some of my thoughts and ideas on memory optimization.
+Given the extensive range of memory module designs in LLMs, we have not yet fully explored all these designs. Based on my current knowledge and preliminary understanding of this field, here are some of my thoughts and ideas on memory optimization.
 
 Eviction Policies:
 
@@ -256,7 +260,7 @@ time (i.e., the execution time to generate the first output token) is longer tha
     \label{fig}
 \end{figure}
 
-\subsubsection{Benefits and drawbacks of the strategy}
+\subsubsection{Benefits and Drawbacks of the Strategy}
 
 The adaption of MLFQ solve the problem of head-of-line blocking
 Compared to Orca's non-preemptive scheduling, skip-join MLFQ significantly reduces job completion time and resolves starvation issues, making it superior in terms of time consuming.
