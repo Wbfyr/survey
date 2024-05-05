@@ -52,6 +52,9 @@ In the process scheduling section, we illustrate methods for enhancing model inf
 In the Computation Resource Management section, this paper examines distributed training and offloading inference from two perspectives. In part A, various parallel optimization schemes existing in distributed training are introduced, including the practical 3D hybrid parallelization widely employed in the industry. Part B discusses current research outcomes in local inference direction through the presentation of two offloading models: FlexGen and PowerInfer.
 
 \section{Memory Management}
+During the operation of LLMs, the memory requirements are complex and substantial. In the model training phase, memory is needed for model parameters and gradients, activation values, and optimizer states. During the inference phase, memory is required for model parameters and input data buffers. Recently, as the demand for long-sequence inference has grown, the proportion of memory occupied by the Key-Value cache has increased in order to maintain more contextual information, becoming a focal point for memory optimization.
+
+Therefore, efficient memory allocation is crucial for large language models. Memory not only affects data storage but also plays a crucial role in improving the training and inference speed of the model, reducing memory footprint and resource allocation, and preventing memory leaks.
 \subsection{Memory Optimization Based on the Attention Algorithm}
 This section primarily focuses on the Attention algorithm, which essentially involves optimizing memory management for the Key-Value (KV) cache.
 \subsubsection{PagedAttention}
