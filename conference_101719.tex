@@ -141,7 +141,7 @@ Employ a combination of different types of storage media (e.g., RAM, SSD, HDD) t
 
 \section{process scheduling}
 
-Inference serving plays a pivotal role in the functionality of interactive AI applications based on LLMs, demanding low job completion times (JCT) to ensure an engaging user experience. However, the substantial size and complexity of LLMs present challenges to inference serving infrastructure, often requiring enterprises to deploy costly clusters equipped with accelerators like GPUs and TPUs. LLM inference possesses unique characteristics that set it apart from other deep neural network (DNN) model inference tasks, such as ResNet【6】. While DNN inference jobs are typically deterministic and highly predictable 【7】, LLM inference follows a distinct autoregressive pattern. Each iteration of an LLM inference job generates one output token, which is then appended to the input for producing the next output token in the subsequent iteration. The execution time of LLM inference depends on both the input and output lengths, with the latter being unknown beforehand, and that also gives a direction of optimizing.
+Inference serving plays a pivotal role in the functionality of interactive AI applications based on LLMs, demanding low job completion times (JCT) to ensure an engaging user experience. However, the substantial size and complexity of LLMs present challenges to inference serving infrastructure, often requiring enterprises to deploy costly clusters equipped with accelerators like GPUs and TPUs. LLM inference possesses unique characteristics that set it apart from other deep neural network (DNN) model inference tasks, such as ResNet \cite{b15}. While DNN inference jobs are typically deterministic and highly predictable \cite{b16}, LLM inference follows a distinct autoregressive pattern. Each iteration of an LLM inference job generates one output token, which is then appended to the input for producing the next output token in the subsequent iteration. The execution time of LLM inference depends on both the input and output lengths, with the latter being unknown beforehand, and that also gives a direction of optimizing.
 Therefore, we start from the Transformer model and analyze various process management and scheduling methods available.
 
 
@@ -151,14 +151,14 @@ Therefore, we start from the Transformer model and analyze various process manag
 
 Due to the large scale of models and texts, batch processing is employed to improve efficiency. Traditional LLM serving systems adopt a run-to-completion approach, where a task continues execution until completion without interruption or pause. However, this approach presents issues:
 - The input lengths vary, and different requests may require different numbers of iterations, causing some requests to complete prematurely.
-Assume there are two requests named x1 and x2. x1 carries a string of “I think this is great”. x2 carries a string of “I love you”. We send the two requests to the transformer
+Assume there are two requests named x1 and x2. x1 carries a string of “I think this is great”. x2 carries a string of “I love you”. We send the two requests to the transformer.
 \begin{figure}[htbp]
     \centerline{\includegraphics[width=0.5\textwidth]{process fig1.png}}
     \caption{scheduling execution at the request granularity level}
     \label{fig}
 \end{figure}
 The figure illustrates the scheduling execution at the request granularity level. In this scenario,
-although request x2 finishes earlier than request x1, the engine performs computation for both “active” and “inactive” requests throughout all iterations. Such extra computation for inactive requests (x2 at iter 3 and 4) limits the efficiency of batched execution. What makes it even worse is that this behavior prevents an early return of the finished request to the client, imposing a substantial amount of extra latency. This is because the engine only returns the execution results to the serving system when it finishes processing all requests in the batch. Similarly, when a new request arrives in the middle of the current batch’s execution, the newly arrived request must wait until all requests in the current batch have finished. Therefore, this will incur a significant amount of additional computational costs and time overhead. [1]
+although request x2 finishes earlier than request x1, the engine performs computation for both “active” and “inactive” requests throughout all iterations. Such extra computation for inactive requests (x2 at iter 3 and 4) limits the efficiency of batched execution. What makes it even worse is that this behavior prevents an early return of the finished request to the client, imposing a substantial amount of extra latency. This is because the engine only returns the execution results to the serving system when it finishes processing all requests in the batch. Similarly, when a new request arrives in the middle of the current batch’s execution, the newly arrived request must wait until all requests in the current batch have finished. Therefore, this will incur a significant amount of additional computational costs and time overhead. \cite{b10}
 
 
 \subsubsection{Solution: iteration-level scheduling}
@@ -168,9 +168,13 @@ Orca gives a distributed serving system which is utilized for deploying Transfor
 
 
 Orca addresses this by scheduling each request at a finer granularity (i.e., at each iteration), in FCFS order:
+
 - The iteration-level scheduler repeats the following three steps:
+
 - Selects requests to run next.
+
 - Invokes the engine to execute one iteration for the selected requests.
+
 - Receives execution results for the scheduled iteration.
 
 When the scheduler receives returns after each iteration, it can detect the completion status of requests, promptly returning completed requests to the client. Importantly, new incoming requests only need to wait for one iteration, significantly reducing queuing delays.
@@ -181,15 +185,15 @@ When the scheduler receives returns after each iteration, it can detect the comp
 The transition of the serving system from request granularity to implementing scheduling at each iteration granularity has enhanced overall scheduling flexibility and improved utilization of computational resources.
 The scheduler monitors the completion status of requests at each iteration, allowing each completed request to return immediately without waiting for other requests to finish together. The space freed up by returned requests enables new incoming requests to enter, significantly reducing queuing delays.
 
-According to evaluation on a GPT-3 175B model , Orca can significantly outperform NVIDIA FasterTransformer in terms of both latency and throughput: 36.9X throughput improvement at the same level of latency.[1]
+According to evaluation on a GPT-3 175B model , Orca can significantly outperform NVIDIA FasterTransformer in terms of both latency and throughput: 36.9X throughput improvement at the same level of latency. \cite{b10}
 
 
 The ability of Large Language Models (LLMs) to perform iteration-level process scheduling and its transferability across different LLM architectures stem from their intrinsic model-agnostic nature. Such scheduling methodologies operate independently of the internal structure of the models, focusing instead on task partitioning and management during iterative computations. Leveraging the parallelism inherent in LLM iterative computations, these scheduling approaches efficiently distribute tasks, irrespective of model specifics, thereby facilitating their migration across diverse LLM frameworks. Furthermore, the reliance on task similarities and the adaptability of scheduling algorithms enable seamless transition and optimization across model boundaries, ensuring their applicability in varied academic contexts.
 
 Thus the iteration-level batch processing (also known as continuous batch processing) method is versatile and can be applied to other models as well, and three examples are shown here:
-- Utilizing continuous batch processing and model-specific memory optimizations (using vLLM) can increase throughput by up to 23 times. [2]
-- Throughput with continuous batch processing (in Ray Serve and Hugging Face's text generation inference) is 8 times that of naive batch processing. [3]
-- By employing optimized models (such as NVIDIA's FasterTransformer), throughput can be increased by 4 times compared to naive batch processing. [3]
+Utilizing continuous batch processing and model-specific memory optimizations (using vLLM) can increase throughput by up to 23 times.  \cite{b11}
+Throughput with continuous batch processing (in Ray Serve and Hugging Face's text generation inference) is 8 times that of naive batch processing. \cite{b12}
+By employing optimized models (such as NVIDIA's FasterTransformer), throughput can be increased by 4 times compared to naive batch processing. \cite{b12}
 
 \subsection{FastServe}
 \subsubsection{problems to be solved}
@@ -198,14 +202,14 @@ Orca implementations used an FCFS strategy without preemptive mechanisms, meanin
 \subsubsection{Skip-join Multi-Level Feedback Queue scheduler}
 
 
-FastServe is based on a preemptive Multi-Level Feedback Queue, where each job initially enters the highest-level queue and gradually descends to lower priority queues as it consumes its time slice, reducing job completion time. To avoid starving, a promote mechanism periodically promotes some jobs. Specifically, each job sets a starve timer, and if it waits in the waiting state beyond a threshold, it is promoted to the highest-level queue Q1. Finally, the scheduler selects jobs for execution based on queue priority from highest to lowest.
+FastServe is based on a preemptive Multi-Level Feedback Queue with a skip-join mechanism (Algorithm 1). Specifically, each job sets a starve timer, and if it waits in the waiting state beyond a threshold, it is promoted to the highest-level queue Q1. Finally, the scheduler selects jobs for execution based on queue priority from highest to lowest.
 
 \begin{algorithm}
-    \caption{Skip-Join MLFQ Scheduler}
-    \begin{algorithmic}[1]
+    \caption{Skip-Join MLFQ Scheduler  \cite{b10}}
+    \begin{algorithmic}
         \State \textbf{Input:} Queues $Q_1, Q_2, ..., Q_k$, jobs $J_{in}$, $J_{pre}$, profiling info $P$
         \State \textbf{Output:} Jobs to be executed $J_{out}$
-        \Procedure{SkipJoinMLFQScheduler}{}
+        \Procedure{SkipjoinMLFQ}{}
         \State \textbf{Initialization:} $J_{out} \leftarrow \emptyset$
         \For{$job \in J_{in}$}
         \State $nextIterTime \leftarrow P.getNextIterationTime(job)$, $p_{job} \leftarrow getHighestPriority(nextIterTime)$
@@ -219,7 +223,7 @@ FastServe is based on a preemptive Multi-Level Feedback Queue, where each job in
         \EndIf
         \If{$job.needsDemotion()$}
         \State $nextIterTime' \leftarrow P.getNextIterationTime(job)$
-        \State $p_{job} \leftarrow getDemotionPriority(p_{job}, nextIterTime')$, $r.demoteTo(Q_{p_{job}})$
+        \State $p_{job}\leftarrow getDemotePrior(p_{job}, nextIterTime')$, $r.demoteTo(Q_{p_{job}})$
         \EndIf
         \EndFor
         \For{$q \in \{Q_2, Q_3, ..., Q_k\}$}
@@ -239,7 +243,7 @@ FastServe is based on a preemptive Multi-Level Feedback Queue, where each job in
         \EndProcedure
     \end{algorithmic}
 \end{algorithm}
-In MLFQ eviction, a skip-join mechanism is introduced. Before a new job joins the queue, it is evaluated (the reason is explained in next paragraph), and based on the estimated overall execution time using prefill time, it is placed into different priority queues. This aims to prioritize the execution of projects with the least remaining time.
+In MLFQ eviction, a skip-join mechanism is introduced(figure 4). Before a new job joins the queue, it is evaluated (the reason is explained in next paragraph), and based on the estimated overall execution time using prefill time, it is placed into different priority queues. This aims to prioritize the execution of projects with the least remaining time.
 
 \begin{figure}[htbp]
     \centerline{\includegraphics[width=0.5\textwidth]{process fig4.png}}
@@ -364,13 +368,13 @@ citation first, followed by the original foreign-language citation \cite{b6}.
     \bibitem{b2} Miao X, Oliaro G, Zhang Z, et al. SpecInfer: Accelerating Large Language Model Serving with Tree-based Speculative Inference and Verification[C]//Proceedings of the 29th ACM International Conference on Architectural Support for Programming Languages and Operating Systems, Volume 3. 2024: 932-949.
     \bibitem{b3} Wang B, Liang X, Yang J, et al. Enhancing large language model with self-controlled memory framework[J]. arXiv e-prints, 2023: arXiv: 2304.13343.
 
-    \bibitem{b10} G. Eason, B. Noble, and I. N. Sneddon, ``On certain integrals of Lipschitz-Hankel type involving products of Bessel functions,'' Phil. Trans. Roy. Soc. London, vol. A247, pp. 529--551, April 1955.
-    \bibitem{b11} J. Clerk Maxwell, A Treatise on Electricity and Magnetism, 3rd ed., vol. 2. Oxford: Clarendon, 1892, pp.68--73.
-    \bibitem{b12} I. S. Jacobs and C. P. Bean, ``Fine particles, thin films and exchange anisotropy,'' in Magnetism, vol. III, G. T. Rado and H. Suhl, Eds. New York: Academic, 1963, pp. 271--350.
-    \bibitem{b13} K. Elissa, ``Title of paper if known,'' unpublished.
-    \bibitem{b14} R. Nicole, ``Title of paper with only first word capitalized,'' J. Name Stand. Abbrev., in press.
-    \bibitem{b15} Y. Yorozu, M. Hirano, K. Oka, and Y. Tagawa, ``Electron spectroscopy studies on magneto-optical media and plastic substrate interface,'' IEEE Transl. J. Magn. Japan, vol. 2, pp. 740--741, August 1987 [Digests 9th Annual Conf. Magnetics Japan, p. 301, 1982].
-    \bibitem{b16} M. Young, The Technical Writer's Handbook. Mill Valley, CA: University Science, 1989.
+    \bibitem{b10} Yu G I, Jeong J S, Kim G W, et al. Orca: A distributed serving system for Transformer-Based generative models[C]//16th USENIX Symposium on Operating Systems Design and Implementation (OSDI 22). 2022: 521-538.
+    \bibitem{b11} Kwon W, Li Z, Zhuang S, et al. Efficient memory management for large language model serving with pagedattention[C]//Proceedings of the 29th Symposium on Operating Systems Principles. 2023: 611-626.
+    \bibitem{b12} Cade Daniel, Chen Shen, Eric Liang, et al.  How continuous batching enables 23x throughput in LLM inference while reducing p50 latency. https://www.anyscale.com/blog/continuous-batching-llm-inference
+    \bibitem{b13} NVIDIA docs, last resumed in Feb. 2023 https://docs.nvidia.com/deeplearning/performance/dl-performance-gpu-background/index.html understand-perf
+    \bibitem{b14} Wu B, Zhong Y, Zhang Z, et al. Fast distributed inference serving for large language models[J]. arXiv preprint arXiv:2305.05920, 2023.
+    \bibitem{b15} He K, Zhang X, Ren S, et al. Deep residual learning for image recognition[C]//Proceedings of the IEEE conference on computer vision and pattern recognition. 2016: 770-778.
+    \bibitem{b16} Gujarati A, Karimi R, Alzayat S, et al. Serving DNNs like clockwork: Performance predictability from the bottom up[C]//14th USENIX Symposium on Operating Systems Design and Implementation (OSDI 20). 2020: 443-462.
 
     \bibitem{b20}Sheng Y, Zheng L, Yuan B, et al. Flexgen: High-throughput generative inference of large language models with a single gpu[C]//International Conference on Machine Learning. PMLR, 2023: 31094-31116.
     \bibitem{b21}Song Y, Mi Z, Xie H, et al. Powerinfer: Fast large language model serving with a consumer-grade gpu[J]. arXiv preprint arXiv:2312.12456, 2023.
