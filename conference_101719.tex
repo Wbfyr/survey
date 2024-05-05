@@ -259,7 +259,13 @@ time (i.e., the execution time to generate the first output token) is longer tha
     \label{fig}
 \end{figure}
 
-\subsection*{Benefits and Drawbacks of The Strategy}
+\subsubsection{Benefits and drawbacks of the strategy}
+
+The adaption of MLFQ solve the problem of head-of-line blocking
+Compared to Orca's non-preemptive scheduling, skip-join MLFQ significantly reduces job completion time and resolves starvation issues, making it superior in terms of time consuming.
+
+However, preemption increases the number of ongoing jobs in the system, and according to measurements, skip-join MLFQ may have a memory overhead 7 times that of FCFS. This preemptive scheduling introduces additional memory overhead, as the KV Cache of each unfinished job must be temporarily stored in memory.
+
 
 \section{Computation Resource Management}
 \subsection{Distributed Training}
