@@ -84,7 +84,7 @@ vLLM's design is highly suitable for integration with distributed storage system
 
 
 \subsubsection{Tree Attention}
-In traditional LLMs, keys and values for each output sequence are independently calculated and stored in a kv cache, lacking effective data sharing among sequences with the same prefixes. We can envision tokens as nodes in a tree, facilitating sharing and reuse of computed k and v values during generation.
+In traditional LLMs, keys and values for each output sequence are independently calculated and stored in a KV cache, lacking effective data sharing among sequences with the same prefixes. We can envision tokens as nodes in a tree, facilitating sharing and reuse of computed k and v values during generation.
 
 An example of this idea's application is the SpecInfer engine \cite{b2}, which employs a "Small Speculative Model" (SSM) for tentative speculative inference, depicted in Figure 2. Efficient tree decoding operators enable parallelized inference, and verified paths are output as the model's inference result sequence.
 
