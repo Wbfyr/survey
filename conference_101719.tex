@@ -58,13 +58,13 @@ This section primarily focuses on the Attention algorithm, which essentially inv
 \subsubsection{PagedAttention}
 In long-sequence inference, the KV cache accumulates a significant amount of contextual information regarding keys and values, resulting in substantial memory consumption that dynamically fluctuates, akin to memory allocation challenges encountered in operating systems. Classic OS memory management techniques, like virtual memory and paging, effectively mitigate unnecessary memory usage, enhancing memory utilization. These principles can inform the design of LLMs.
 
-Within the Transformer architecture and its derivatives, the attention mechanism serves as a crucial component for enabling the model to comprehend the relationships among input data. Consequently, integrating paging concepts, like paging the KV cache, should be contemplated within the Attention algorithm. The PagedAttention algorithm[1], proposed by Woosuk Kwon and colleagues, offers an illustrative implementation method. Leveraging this insight, vLLM, a service system tailored for LLMs, has been developed.
+Within the Transformer architecture and its derivatives, the attention mechanism serves as a crucial component for enabling the model to comprehend the relationships among input data. Consequently, integrating paging concepts, like paging the KV cache, should be contemplated within the Attention algorithm. The PagedAttention algorithm \cite{b1}, proposed by Woosuk Kwon and colleagues, offers an illustrative implementation method. Leveraging this insight, vLLM, a service system tailored for LLMs, has been developed.
 
 vLLM is based on the PagedAttention algorithm. The strategy of PagedAttention involves dividing the KV cache of each sequence into multiple blocks, each containing a certain number of tokens' keys and values. For each request to the KV cache, multiple non-contiguous blocks can be allocated. Figure 1 illustrates the storage method of keys and values in the KV cache under the PagedAttention algorithm, while also demonstrating the computation of Query and Key under this storage format.
 
 \begin{figure}[htbp]
     \centerline{\includegraphics[width=0.5\textwidth]{process figM1.png}}
-    \caption{The block storage in the PagedAttention [1]}
+    \caption{The block storage in the PagedAttention \cite{b1}}
     \label{fig}
 \end{figure}
 
@@ -87,11 +87,11 @@ vLLM's design is highly suitable for integration with distributed storage system
 \subsubsection{Tree Attention}
 In traditional LLMs, keys and values for each output sequence are independently calculated and stored in a kv cache, lacking effective data sharing among sequences with the same prefixes. We can envision tokens as nodes in a tree, facilitating sharing and reuse of computed k and v values during generation.
 
-An example of this idea's application is the SpecInfer engine[2], which employs a "Small Speculative Model" (SSM) for tentative speculative inference, depicted in Figure 2. Efficient tree decoding operators enable parallelized inference, and verified paths are output as the model's inference result sequence.
+An example of this idea's application is the SpecInfer engine \cite{b2}, which employs a "Small Speculative Model" (SSM) for tentative speculative inference, depicted in Figure 2. Efficient tree decoding operators enable parallelized inference, and verified paths are output as the model's inference result sequence.
 
 \begin{figure}[htbp]
     \centerline{\includegraphics[width=0.5\textwidth]{process figM2.png}}
-    \caption{An overview of SpecInfer's tree based speculative inference and verification mechanism [2]}
+    \caption{An overview of SpecInfer's tree based speculative inference and verification mechanism \cite{b2}}
     \label{fig}
 \end{figure}
 
@@ -109,7 +109,7 @@ In the description above, the term "memory" has two different meanings. The firs
 \subsubsection{Background}
 With the development of LLMs, the datasets they rely on have become increasingly vast, and the input they process has become more verbose. When faced with massive amounts of input data, the model's original context-linking capabilities might experience a "forgetting" phenomenon, which is the loss of crucial historical information. To address this issue, memory modules were developed. These modules have become effective tools for handling long-term dependencies, enhancing understanding of context, and improving memory of past information.
 
-There are several main types of memory modules in LLMs. The following will provide a detailed analysis of a specific memory module design called “Self-Controlled Memory System”(SCM)[3].
+There are several main types of memory modules in LLMs. The following will provide a detailed analysis of a specific memory module design called “Self-Controlled Memory System”(SCM) \cite{b3}.
 
 \subsubsection{Implementation and Benefits of SCM}
 The SCM system optimizes LLM processing and responsiveness, particularly in memory management. It efficiently stores structured memory items like interaction indices, observations, responses, summaries, and embeddings using caching and vector databases. Memories are categorized into Activation Memory for historical data and Flash Memory for recent interactions, allowing flexible memory utilization.
@@ -308,7 +308,7 @@ Offloading is one aspect to reduce computation and storage resources for LLM inf
 Let's delve into two models specifically designed for offloading:
 
 \subsubsection{Flexgen}
-FlexGen[1] aims for the utmost throughput, identifying the most suitable offloading strategy within a specified search space. It utilizes methods like model compression and sparsification to execute inference for models with hundreds of billions of parameters on consumer-grade hosts.
+FlexGen \cite{b20} aims for the utmost throughput, identifying the most suitable offloading strategy within a specified search space. It utilizes methods like model compression and sparsification to execute inference for models with hundreds of billions of parameters on consumer-grade hosts.
 FlexGen can be flexibly configured under various hardware resource constraints by aggregating memory and computation from the GPU, CPU, and disk. Through a linear programming optimizer, it searches for the best pattern to store and access the tensors, including weights, activations, and attention key/value (KV) cache. FlexGen further compresses both weights and KV cache to 4 bits with negligible accuracy loss.
 
 One key idea of FlexGen is to play the latency-throughput trade-off. Achieving low latency is inherently challenging for offloading methods, but the I/O efficiency of offloading can be greatly boosted for throughput-oriented scenarios (see the figure above). FlexGen utilizes a block schedule to reuse weight and overlap I/O with computation, as shown in figure (b) below, while other baseline systems use an inefficient row-by-row schedule, as shown in figure (a) below.
@@ -361,17 +361,19 @@ citation first, followed by the original foreign-language citation \cite{b6}.
 
 \begin{thebibliography}{00}
     \bibitem{b1} Kwon W, Li Z, Zhuang S, et al. Efficient memory management for large language model serving with pagedattention[C]//Proceedings of the 29th Symposium on Operating Systems Principles. 2023: 611-626.
-    
     \bibitem{b2} Miao X, Oliaro G, Zhang Z, et al. SpecInfer: Accelerating Large Language Model Serving with Tree-based Speculative Inference and Verification[C]//Proceedings of the 29th ACM International Conference on Architectural Support for Programming Languages and Operating Systems, Volume 3. 2024: 932-949.
     \bibitem{b3} Wang B, Liang X, Yang J, et al. Enhancing large language model with self-controlled memory framework[J]. arXiv e-prints, 2023: arXiv: 2304.13343.
 
-    \bibitem{b1} G. Eason, B. Noble, and I. N. Sneddon, ``On certain integrals of Lipschitz-Hankel type involving products of Bessel functions,'' Phil. Trans. Roy. Soc. London, vol. A247, pp. 529--551, April 1955.
-    \bibitem{b2} J. Clerk Maxwell, A Treatise on Electricity and Magnetism, 3rd ed., vol. 2. Oxford: Clarendon, 1892, pp.68--73.
-    \bibitem{b3} I. S. Jacobs and C. P. Bean, ``Fine particles, thin films and exchange anisotropy,'' in Magnetism, vol. III, G. T. Rado and H. Suhl, Eds. New York: Academic, 1963, pp. 271--350.
-    \bibitem{b4} K. Elissa, ``Title of paper if known,'' unpublished.
-    \bibitem{b5} R. Nicole, ``Title of paper with only first word capitalized,'' J. Name Stand. Abbrev., in press.
-    \bibitem{b6} Y. Yorozu, M. Hirano, K. Oka, and Y. Tagawa, ``Electron spectroscopy studies on magneto-optical media and plastic substrate interface,'' IEEE Transl. J. Magn. Japan, vol. 2, pp. 740--741, August 1987 [Digests 9th Annual Conf. Magnetics Japan, p. 301, 1982].
-    \bibitem{b7} M. Young, The Technical Writer's Handbook. Mill Valley, CA: University Science, 1989.
+    \bibitem{b10} G. Eason, B. Noble, and I. N. Sneddon, ``On certain integrals of Lipschitz-Hankel type involving products of Bessel functions,'' Phil. Trans. Roy. Soc. London, vol. A247, pp. 529--551, April 1955.
+    \bibitem{b11} J. Clerk Maxwell, A Treatise on Electricity and Magnetism, 3rd ed., vol. 2. Oxford: Clarendon, 1892, pp.68--73.
+    \bibitem{b12} I. S. Jacobs and C. P. Bean, ``Fine particles, thin films and exchange anisotropy,'' in Magnetism, vol. III, G. T. Rado and H. Suhl, Eds. New York: Academic, 1963, pp. 271--350.
+    \bibitem{b13} K. Elissa, ``Title of paper if known,'' unpublished.
+    \bibitem{b14} R. Nicole, ``Title of paper with only first word capitalized,'' J. Name Stand. Abbrev., in press.
+    \bibitem{b15} Y. Yorozu, M. Hirano, K. Oka, and Y. Tagawa, ``Electron spectroscopy studies on magneto-optical media and plastic substrate interface,'' IEEE Transl. J. Magn. Japan, vol. 2, pp. 740--741, August 1987 [Digests 9th Annual Conf. Magnetics Japan, p. 301, 1982].
+    \bibitem{b16} M. Young, The Technical Writer's Handbook. Mill Valley, CA: University Science, 1989.
+
+    \bibitem{b20}Sheng Y, Zheng L, Yuan B, et al. Flexgen: High-throughput generative inference of large language models with a single gpu[C]//International Conference on Machine Learning. PMLR, 2023: 31094-31116.
+    \bibitem{b21}Song Y, Mi Z, Xie H, et al. Powerinfer: Fast large language model serving with a consumer-grade gpu[J]. arXiv preprint arXiv:2312.12456, 2023.
 \end{thebibliography}
 \vspace{12pt}
 \color{red}
