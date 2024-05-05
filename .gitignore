@@ -3,3 +3,5 @@
 *.gz
 *.clz
 *.pdf
+*.xdv
+*.fdb_latexmk
