@@ -252,6 +252,69 @@ time (i.e., the execution time to generate the first output token) is longer tha
 
 \subsection*{Benefits and drawbacks of the strategy}
 
+\section{computation resource management}
+\subsection{distributed training}
+With the advancement of LLMs, both model parameters and training datasets are rapidly becoming enormous. To train a mature large-scale model effectively, it is inevitable to employ multiple GPUs for distributed collaborative training to tackle the massive datasets and model parameters that cannot be accommodated on a single card. The crucial issue for large models is how to utilize multi-GPU resources and coordinate information among multiple GPUs. Distributed training nowadays primarily focuses on parallel training through the following three aspects:
+
+\subsubsection{Data parallelism}
+Data parallelism involves partitioning massive datasets and maintaining complete models on each GPU. The dataset is divided into 𝑛 parts, and each GPU trains a portion to achieve the training effect. Here, we can discuss two methods of data parallelism combined with actual PyTorch code: DP and DDP.
+
+To achieve effective training across multiple GPUs, it implies that there must be a certain level of information exchange and synchronization among the GPUs. In the torch.nn.DataParallel method, each GPU communicates through a server GPU, responsible for interacting with each GPU, handling information exchange, and summarizing data. Specifically, the server GPU needs to aggregate the forward outputs from each GPU to calculate the loss, compute the gradient of the final layer through the loss, distribute this gradient to each GPU, where each GPU conducts backward propagation independently, and finally aggregate the gradients of all parameters for gradient updates.
+
+Due to the existence of a central GPU, the process is relatively straightforward, with this GPU continuously handling information exchange.
+However, the major drawback of this method lies in the central GPU, as its memory and computational capacity become bottlenecks, resulting in low utilization of other GPUs. Hence, this method is not recommended.
+
+With DDP, the most significant structural change is the elimination of the central GPU, thus achieving true distributed effects. To achieve this, we must first introduce a communication method: ring All-Reduce.
+
+Allreduce: a sum or average of partitioned data which is then shared back to the cluster nodes.(https://arxiv.org/pdf/1312.3020)In the framework of ring All-Reduce, each GPU holds an equal status, where each GPU only receives data from its left neighbor and sends data to its right neighbor. The entire ring All-Reduce algorithm consists of two steps:
+1) scatter-reduce. This step gradually exchanges and merges gradients with each other, resulting in each GPU holding a part of the fully merged gradient. 2) all-gather. This step involves the gradual exchange of incomplete merged gradients, eventually ensuring that all GPUs possess the complete merged gradient.
+The entire architecture forms a ring, where information flows cyclically. This enables the successful interaction and merging of all information, hence the term "ring All-Reduce". The theoretical data transmission volume is 2(N−1)×K/N​, where N is the number of GPUs and K is the total data volume per device. The data transferred approaches 2K, while K×N represents the total data volume. Thus, with an increasing number of GPUs, ring All-Reduce can achieve linear scaling.
+
+Returning to DDP, with the premise that ring All-Reduce can achieve linear scaling, we abandon the central GPU and opt for a more evenly balanced distributed system. This is precisely what DDP accomplishes. Therefore, the gradient aggregation function performed by the central GPU in DP is replaced in DDP by allreduce among GPUs. Moreover, since backward does not depend on the aggregated gradient, the allreduce process can be synchronized with backward, further enhancing concurrency and utilization of computational resources.
+
+\subsubsection{Pipeline Parallelism}
+Data parallelism only addresses the issue of oversized datasets. In today's LLMs, many model parameters reach several billion, and ChatGPT-4 even surpasses a trillion parameters. In such cases, for distributed training to occur, it is necessary to partition the model.
+natural approach is to split the model between different layers, with each GPU holding different layers. Data flows layer by layer between GPUs, sequentially forwarding and backwarding through each layer. This approach solves the problem of storing excessively large models. However, merely doing so doesn't improve computation speed with multiple cards due to communication overhead. In fact, it may prolong training time since only one GPU computes at a time while others remain idle, failing to utilize computational resources effectively.
+Pipeline parallelism, inspired by CPU instruction pipelining, introduces GPU computation pipelining in distributed training. The dataset is further divided, with each GPU handling a micro-batch. Once processed, the output is sent to the next GPU, while the current GPU proceeds to handle the next micro-batch. This pipeline design ensures that GPUs are continuously engaged, fully utilizing all computational resources. Consequently, linear acceleration is achievable with an increasing number of GPUs.
+
+\subsubsection{Tensor Parallelism}
+As models grow larger, a single GPU may not even accommodate a single layer. In such cases, we consider vertically dividing layers into segments and distributing them across different GPUs. This is where tensor parallelism comes into play.
+A tensor, essentially an n-dimensional matrix, is broken down since computations in frameworks like Transformers mainly involve matrix multiplications with linear relationships between parameters. Thus, the overall matrix is divided and matrix multiplications are performed separately, with results subsequently aggregated.
+Tensor parallelism entails dividing internal matrices of large models, conducting separate computations, and then aggregating or concatenating outputs using techniques like allreduce. This method is prevalent in LLMs, primarily because modern LLMs are predominantly built upon Transformer architectures, which facilitate tensor parallelism. In contrast, for CNNs, the convolution process is more complex, making it challenging to parallelize through simple matrix partitioning. Hence, this stark difference in parameter quantity between LLMs and CNNs is a significant reason for the former's much larger parameter count.
+
+\subsubsection{ZeRO}
+After partitioning and parallelizing datasets and models, as the number of parameters increases, it's evident that certain redundant parts occupy a significant amount of memory. These parts can be further optimized, with one of them being model states.
+Model states primarily consist of three components:1)optimizer states 2)gradient 3)model parameter
+ZeRO (Zero Redundancy Optimizer) technology emerges to address the issue of model states consuming a large amount of memory. ZeRO is divided into three levels: ZeRO-1 handles optimizer states, ZeRO-2 handles optimizer states and gradients, and ZeRO-3 handles all model states.
+The concept behind ZeRO is relatively straightforward: distribute model states across different GPUs, and during specific steps where complete model states are required, obtain them through allreduce. This increases communication overhead but reduces memory consumption. However, as the number of partitions increases, the corresponding technical intricacies also escalate, and excessive communication may lead to diminishing returns.
+
+\subsubsection{3D Hybrid Parallelism}
+By integrating data parallelism, tensor parallelism, pipeline parallelism, and ZeRO technology, with ZeRO-3 inherently partitioning model parameters, overlapping functionalities with tensor parallelism and pipeline parallelism occur. Meanwhile, ZeRO-2 partitions gradients. Combining ZeRO-2 with pipeline parallelism results in significant communication overhead. Hence, when employing 3D parallelism, it is advisable to combine it with ZeRO-1.
+
+Through the coordinated use of multiple parallel strategies, large model parameters can reach the scale of hundreds of billions.
+
+\subsection{Offloading Inference}
+For large-scale model training networks, inference is undoubtedly much easier compared to training. However, current commercial inference for large models, such as ChatGPT, is conducted on remote servers, with results transmitted back to users over the network. If it were possible to deploy pre-trained large models locally for inference, it would undoubtedly further expand the application of large models, representing a significant step forward.
+
+When it comes to LLM inference, there are three main directions for reducing computation and storage resources:
+1)model compression 2)collaborative inference 3)offloading
+Offloading is one aspect to reduce computation and storage resources for LLM inference. it makes full use of various hardware resources, transferring parameters from GPU memory to system memory or even disk storage.
+Let's delve into two models specifically designed for offloading:
+
+\subsubsection{Flexgen}
+FlexGen aims for the utmost throughput, identifying the most suitable offloading strategy within a specified search space. It utilizes methods like model compression and sparsification to execute inference for models with hundreds of billions of parameters on consumer-grade hosts.
+\subsubsection{PowerInfer}
+PowerInfer partitions neurons into hot and cold neurons based on predictors. During inference, hot neurons are computed on the GPU, while cold neurons are processed on the CPU.
+PowerInfer's core idea is essentially sparsity, built upon the fact that only a small portion of neurons are active during the neural network inference process, while the majority remain inactive. Dejavu experiments have verified that over 80\% of neurons and over 95\% of MLP parameters can be excluded from inference. This implies that a subset of neurons can produce results similar to those of the entire large model. Therefore, placing cold neurons on the CPU for computation would not significantly affect the inference results, as long as the active neurons are computed effectively. Additionally, since cold and hot neurons are pre-determined, the data exchange and communication overhead during inference would be considerably reduced.
+\begin{figure}[htbp]
+    \centerline{\includegraphics[width=0.5\textwidth]{device fig1.png}}
+    \caption{The architecture overview and inference workflow of PowerInfer.}
+    \label{fig}
+\end{figure}
+The final implementation of PowerInfer has shown remarkable effectiveness. When compared with llama.cpp across various models such as Opt 66B, Opt 175B, Falcon 40B, and Llama 70B, it has achieved several-fold acceleration for different output lengths and data precisions.
+
+PowerInfer's approach is novel, particularly in its prediction of cold and hot neurons, which offers an innovative perspective. The demonstration results are quite impressive, showcasing significant speed improvements. However, the practicality of this approach still needs improvement. Its model adaptability is somewhat cumbersome, as it is only suitable for models using the ReLU activation function. Models utilizing SILU activation require fine-tuning for a ReLU version. Additionally, this method is lossy, which raises questions about its compatibility with further developments in quantization. Whether PowerInfer can coexist with quantization is also a worthwhile consideration.
+
 \section*{Acknowledgment}
 
 
