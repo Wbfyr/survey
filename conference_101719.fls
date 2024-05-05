@@ -293,6 +293,9 @@ INPUT process figM2.png
 INPUT ./process fig1.png
 INPUT ./process fig1.png
 INPUT process fig1.png
+INPUT ./process fig3.png
+INPUT ./process fig3.png
+INPUT process fig3.png
 INPUT ./process fig4.png
 INPUT ./process fig4.png
 INPUT process fig4.png

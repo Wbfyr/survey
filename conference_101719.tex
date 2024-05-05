@@ -178,6 +178,14 @@ Orca addresses this by scheduling each request at a finer granularity (i.e., at 
 
 - Receives execution results for the scheduled iteration.
 
+Figure 4 depicts the system architecture and the overall workflow of Orca using the iteration-level scheduling.
+
+\begin{figure}[htbp]
+    \centerline{\includegraphics[width=0.5\textwidth]{process fig3.png}}
+    \caption{Skip-join MLFQ with starvation prevention}
+    \label{fig}
+\end{figure}
+
 When the scheduler receives returns after each iteration, it can detect the completion status of requests, promptly returning completed requests to the client. Importantly, new incoming requests only need to wait for one iteration, significantly reducing queuing delays.
 
 \subsubsection{Benefits Transferability of the Iteration-Level Scheduling Strategy}
@@ -244,7 +252,7 @@ FastServe is based on a preemptive Multi-Level Feedback Queue with a skip-join m
         \EndProcedure
     \end{algorithmic}
 \end{algorithm}
-In MLFQ eviction, a skip-join mechanism is introduced(figure 4). Before a new job joins the queue, it is evaluated (the reason is explained in next paragraph), and based on the estimated overall execution time using prefill time, it is placed into different priority queues. This aims to prioritize the execution of projects with the least remaining time.
+In MLFQ eviction, a skip-join mechanism is introduced(figure 5). Before a new job joins the queue, it is evaluated (the reason is explained in next paragraph), and based on the estimated overall execution time using prefill time, it is placed into different priority queues. This aims to prioritize the execution of projects with the least remaining time.
 
 \begin{figure}[htbp]
     \centerline{\includegraphics[width=0.5\textwidth]{process fig4.png}}
