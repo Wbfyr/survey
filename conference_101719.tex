@@ -47,7 +47,7 @@
 \section{Introduction}
 Advancements in LLMs have unlocked novel opportunities across various domains, catalyzing the emergence of a new era of interactive AI applications. Notably, ChatGPT stands out as a pioneering example, facilitating user interaction with AI agents in a conversational manner to address tasks spanning from language translation to software engineering. The remarkable capabilities of ChatGPT have propelled its rapid adoption, positioning it among the fastest-growing applications in history. Numerous organizations have embraced this trend by introducing LLMs and ChatGPT-like applications, exemplified by initiatives such as Microsoft's New Bing, Google's Bard, Meta's LLaMa, Stanford's Alpaca, Databricks' Dolly, and UC Berkeley's Vicuna, among others.However, as LLM models evolve, the increasing volume of data sets and parameters, coupled with elongated context, leads to augmented memory I/O overhead and necessitates optimization of distributed communication structures. These factors collectively impede the development of LLMs. This paper undertakes an analysis of resource management in LLMs from three perspectives: memory management, process scheduling, and allocation of computational resources. Additionally, various strategies and model methodologies for optimizing LLM memory, communication overhead, and computational costs are discussed.
 
-In the memory management section of this survey, we explore two components: the Key-Value (KV) cache and the long-term memory module. The former represents the most prominent source of memory overhead in LLMs, for which we investigate two classical optimization methods: PagedAttention and Tree Attention. The latter incurs additional memory overhead as context grows, and we discuss it through the lens of a Self-Control Memory model. Common memory optimization techniques in large models, such as model compression and distributed storage, while not unique to LLMs, are not elaborated upon in this survey.
+In the memory management section of this survey, we explore two components: the Key-Value (KV) cache and the long-term memory module. The former represents the most prominent source of memory overhead in LLMs, for which we investigate three classical optimization methods: PagedAttention, Tree Attention and Token Attention. The latter incurs additional memory overhead as context grows, and we discuss it through the lens of a Self-Control Memory model. Common memory optimization techniques in large models, such as model compression and distributed storage, while not unique to LLMs, are not elaborated upon in this survey.
 In the process scheduling section, we illustrate methods for enhancing model inference speed and reducing computational costs using process scheduling from both the Orca and FastServe models. We also analyze the drawbacks associated with these methods, highlighting novel mechanisms and scheduling strategies for detailed discussion.
 In the Computation Resource Management section, this paper examines distributed training and offloading inference from two perspectives. In part A, various parallel optimization schemes existing in distributed training are introduced, including the practical 3D hybrid parallelization widely employed in the industry. Part B discusses current research outcomes in local inference direction through the presentation of two offloading models: FlexGen and PowerInfer.
 
@@ -102,6 +102,14 @@ During Tree Attention validation, each candidate token sequence's accuracy must 
 
 Integrating Tree Attention with DFS effectively eliminates redundant KV cache allocations from multiple output sequences sharing the same prefixes, significantly enhancing memory utilization and computational efficiency.
 
+\subsubsection{Token Attention}
+In LLMs, memory resources are allocated for the computation of each token. However, not all tokens are actively used at all times. The memory management for each token in LLMs is not sufficiently detailed, leading to unnecessary occupation of memory resources, which can affect the overall performance and efficiency of the system.
+
+Based on this concept, the LightLLM model was designed, which includes Token Attention that reduces memory usage by enabling more precise operations on each token.
+
+In traditional self-attention mechanisms, the queries, keys, and values for all tokens are computed simultaneously for the entire sequence. In contrast, in Token Attention, each token independently calculates its own query, key, and value, allowing the model to handle the relationships and interactions between different tokens more flexibly.
+
+The fine-grained management of Token Attention, compared to traditional Attention algorithms, is easier to implement in practice. It can effectively manage memory usage and reduce issues with memory fragmentation.
 \subsubsection{Summary of Attention Algorithm}
 When employing memory optimization strategies based on attention mechanisms, the reduction in memory usage is often not significant, but there is usually a substantial increase in the inference time for LLMs. Essentially, this strategy involves trading time for space. Therefore, when implementing such optimizations, it is crucial to balance computational performance and memory efficiency, making decisions based on specific application requirements.
 
@@ -354,8 +362,11 @@ PowerInfer's approach is novel, particularly in its prediction of cold and hot n
 In the resource management of Large Language Models (LLMs), optimization of memory and computational resources constrains each other. Among the various optimization methods for both memory and computational resources mentioned above, the optimization of one often leads to redundancy in the other. In many cases, it is necessary to decide whether to use specific optimization methods based on the specific application scenarios and requirements of the model. We also look forward to more advanced hardware support and design optimization in the future to overcome this dilemma.
 
 \section{Acknowledgment}
-thanks for teacher's and assistant's help
+During the completion of this survey report, we sincerely thank our teacher for their guidance and support. Your expertise and encouragement have been invaluable in deepening our understanding of the survey's topics and methods.
 
+We also appreciate assistants for their assistance. Your patient responses and guidance have helped us better grasp the survey's procedures and outcomes.
+
+Our heartfelt thanks to all mentioned above!
 \begin{thebibliography}{00}
     \bibitem{b1} Kwon W, Li Z, Zhuang S, et al. Efficient memory management for large language model serving with pagedattention[C]//Proceedings of the 29th Symposium on Operating Systems Principles. 2023: 611-626.
     \bibitem{b2} Miao X, Oliaro G, Zhang Z, et al. SpecInfer: Accelerating Large Language Model Serving with Tree-based Speculative Inference and Verification[C]//Proceedings of the 29th ACM International Conference on Architectural Support for Programming Languages and Operating Systems, Volume 3. 2024: 932-949.
