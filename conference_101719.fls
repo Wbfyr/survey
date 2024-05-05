@@ -266,6 +266,7 @@ INPUT d:/texlive/2023/texmf-dist/tex/latex/base/ts1cmr.fd
 INPUT d:/texlive/2023/texmf-dist/tex/latex/base/ts1cmr.fd
 INPUT d:/texlive/2023/texmf-dist/tex/latex/base/ts1cmr.fd
 INPUT d:/texlive/2023/texmf-dist/tex/latex/base/ts1cmr.fd
+OUTPUT conference_101719.xdv
 INPUT ./process figM1.png
 INPUT ./process figM1.png
 INPUT process figM1.png
@@ -286,7 +287,6 @@ INPUT d:/texlive/2023/texmf-dist/tex/latex/amsfonts/umsb.fd
 INPUT d:/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm10.tfm
 INPUT d:/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm7.tfm
 INPUT d:/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm5.tfm
-OUTPUT conference_101719.xdv
 INPUT ./process figM2.png
 INPUT ./process figM2.png
 INPUT process figM2.png
