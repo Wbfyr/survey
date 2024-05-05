@@ -13,7 +13,6 @@
 \begin{document}
 
 \title{Resource Management in Large Language Models\\
-    \thanks{Identify applicable funding agency here. If none, delete this.}
 }
 
 \author{\IEEEauthorblockN{Xuzhou Zhu}
@@ -51,7 +50,7 @@ Therefore, efficient memory allocation is crucial for large language models. Mem
 
 The Transformer model has achieved tremendous success in the field of Natural Language Processing (NLP) and has become the foundational architecture for many powerful pre-trained language models, such as BERT and GPT. LLMs typically rely on the Transformer architecture and leverage massive corpora for pre-training to learn rich representations of language. Thus, LLMs can be viewed as specific applications of the Transformer model in NLP tasks. However, advanced models may have large volumes and require significant resources, resulting in high usage costs. For instance, GPT-3 has 175 billion parameters, and serving models of such scale may incur substantial costs due to computational expenses, necessitating acceleration from the perspective of process management and scheduling.
 The inference of LLMs is constrained by memory input/output (I/O) limitations rather than computational constraints. In other words, currently, the time required to load 1MB of data into the computing cores of a GPU is greater than the time these computing cores need to perform LLM computations on 1MB of data. This implies that the throughput of LLM inference is largely dependent on how much batch processing can be accommodated within the high-bandwidth GPU memory.
-\section{memory management}
+\section{Memory Management}
 \subsection{Memory Optimization Based on the Attention Algorithm}
 This section primarily focuses on the Attention algorithm, which essentially involves optimizing memory management for the Key-Value (KV) cache.
 \subsubsection{PagedAttention}
@@ -77,7 +76,7 @@ vLLM employs block-level memory management and preemptive request scheduling, bo
 
 The concept of partitioning the KV cache allows for similar benefits in optimizing KV cache storage space: the space can be non-contiguous, eliminating the external fragmentation caused by contiguous storage. Additionally, the “filled” records also maximize the utilization of each block to a certain extent, thereby reducing internal fragmentation. Moreover, the PagedAttention kernel can process the KV cache in parallel across multiple positions, thereby enhancing hardware utilization and reducing latency.
 
-\subsubsection{Self-Analysis: Combination of vLLM and distributed storage}
+\subsubsection{Self-Analysis: Combination of vLLM and Distributed Storage}
 In vLLM, using a centralized scheduler to coordinate parallel model execution is crucial. This strategy ensures that each model shard can efficiently handle the tasks assigned to it. In this setup, although each GPU processes a part of the entire input, all GPUs still need to access the same set of KV cache data. Therefore, vLLM adopts a centrally managed single KV cache manager to synchronize and share critical data across all computing nodes.
 
 vLLM's design is highly suitable for integration with distributed storage systems, offering the some key advantages: vLLM can implement block allocation and dynamic management of the KV cache. When integrated with distributed storage systems, this architecture can leverage the storage system's dynamic resource allocation capabilities, automatically expanding or contracting storage resources as needed. This not only improves memory utilization but also increases the system's total storage capacity. It also helps to store data close to the computing resources that use this data, thereby reducing data transmission times and enhancing overall processing speed. Moreover, this combination can utilize advanced data backup and fault tolerance mechanisms. In the event of a single node or device failure, the system can automatically recover KV cache data from backups.
@@ -138,14 +137,14 @@ Employ a combination of different types of storage media (e.g., RAM, SSD, HDD) t
 
 
 
-\section{process scheduling}
+\section{Process Scheduling}
 
 Inference serving plays a pivotal role in the functionality of interactive AI applications based on LLMs, demanding low job completion times (JCT) to ensure an engaging user experience. However, the substantial size and complexity of LLMs present challenges to inference serving infrastructure, often requiring enterprises to deploy costly clusters equipped with accelerators like GPUs and TPUs. LLM inference possesses unique characteristics that set it apart from other deep neural network (DNN) model inference tasks, such as ResNet \cite{b15}. While DNN inference jobs are typically deterministic and highly predictable \cite{b16}, LLM inference follows a distinct autoregressive pattern. Each iteration of an LLM inference job generates one output token, which is then appended to the input for producing the next output token in the subsequent iteration. The execution time of LLM inference depends on both the input and output lengths, with the latter being unknown beforehand, and that also gives a direction of optimizing.
 Therefore, we start from the Transformer model and analyze various process management and scheduling methods available.
 
 
-\subsection{iteration-level scheduling in Orca}
-\subsubsection{problems to be solved}
+\subsection{Iteration-level Scheduling in Orca}
+\subsubsection{Problems to Be Solved}
 
 
 Due to the large scale of models and texts, batch processing is employed to improve efficiency. Traditional LLM serving systems adopt a run-to-completion approach, where a task continues execution until completion without interruption or pause. However, this approach presents issues:
@@ -160,7 +159,7 @@ The figure illustrates the scheduling execution at the request granularity level
 although request x2 finishes earlier than request x1, the engine performs computation for both “active” and “inactive” requests throughout all iterations. Such extra computation for inactive requests (x2 at iter 3 and 4) limits the efficiency of batched execution. What makes it even worse is that this behavior prevents an early return of the finished request to the client, imposing a substantial amount of extra latency. This is because the engine only returns the execution results to the serving system when it finishes processing all requests in the batch. Similarly, when a new request arrives in the middle of the current batch’s execution, the newly arrived request must wait until all requests in the current batch have finished. Therefore, this will incur a significant amount of additional computational costs and time overhead. \cite{b10}
 
 
-\subsubsection{Solution: iteration-level scheduling}
+\subsubsection{Solution: Iteration-Level Scheduling}
 
 
 Orca gives a distributed serving system which is utilized for deploying Transformer-based generative models.
@@ -178,7 +177,7 @@ Orca addresses this by scheduling each request at a finer granularity (i.e., at 
 
 When the scheduler receives returns after each iteration, it can detect the completion status of requests, promptly returning completed requests to the client. Importantly, new incoming requests only need to wait for one iteration, significantly reducing queuing delays.
 
-\subsubsection{Benefits transferability of the iteration-level scheduling strategy}
+\subsubsection{Benefits Transferability of the Iteration-Level Scheduling Strategy}
 
 
 The transition of the serving system from request granularity to implementing scheduling at each iteration granularity has enhanced overall scheduling flexibility and improved utilization of computational resources.
@@ -195,7 +194,7 @@ Throughput with continuous batch processing (in Ray Serve and Hugging Face's tex
 By employing optimized models (such as NVIDIA's FasterTransformer), throughput can be increased by 4 times compared to naive batch processing. \cite{b12}
 
 \subsection{FastServe}
-\subsubsection{problems to be solved}
+\subsubsection{Problems to Be Solved}
 
 Orca implementations used an FCFS strategy without preemptive mechanisms, meaning once a job enters the running state, it must wait until completion. This leads to severe head-of-line blocking issues，which indicates a phenomenon that the delivery of certain packets or tasks is delayed due to the presence of other packets or tasks ahead of them in the queue. Therefore, FastServe, a distributed inference serving system for LLMs, adopts a skip-join Multi-Level Feedback Queue scheduler to implement preemptive scheduling.
 \subsubsection{Skip-join Multi-Level Feedback Queue scheduler}
@@ -260,10 +259,10 @@ time (i.e., the execution time to generate the first output token) is longer tha
     \label{fig}
 \end{figure}
 
-\subsection*{Benefits and drawbacks of the strategy}
+\subsection*{Benefits and Drawbacks of The Strategy}
 
-\section{computation resource management}
-\subsection{distributed training}
+\section{Computation Resource Management}
+\subsection{Distributed Training}
 With the advancement of LLMs, both model parameters and training datasets are rapidly becoming enormous. To train a mature large-scale model effectively, it is inevitable to employ multiple GPUs for distributed collaborative training to tackle the massive datasets and model parameters that cannot be accommodated on a single card. The crucial issue for large models is how to utilize multi-GPU resources and coordinate information among multiple GPUs. Distributed training nowadays primarily focuses on parallel training through the following three aspects:
 
 \subsubsection{Data parallelism}
