@@ -56,7 +56,6 @@ During the operation of LLMs, the memory requirements are complex and substantia
 
 Therefore, efficient memory allocation is crucial for large language models. Memory not only affects data storage but also plays a crucial role in improving the training and inference speed of the model, reducing memory footprint and resource allocation, and preventing memory leaks.
 \subsection{Memory Optimization Based on the Attention Algorithm}
-This section primarily focuses on the Attention algorithm, which essentially involves optimizing memory management for the Key-Value (KV) cache.
 \subsubsection{PagedAttention}
 In long-sequence inference, the KV cache accumulates a significant amount of contextual information regarding keys and values, resulting in substantial memory consumption that dynamically fluctuates, akin to memory allocation challenges encountered in operating systems. Classic OS memory management techniques, like virtual memory and paging, effectively mitigate unnecessary memory usage, enhancing memory utilization. These principles can inform the design of LLMs.
 
