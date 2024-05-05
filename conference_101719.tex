@@ -308,9 +308,18 @@ Offloading is one aspect to reduce computation and storage resources for LLM inf
 Let's delve into two models specifically designed for offloading:
 
 \subsubsection{Flexgen}
-FlexGen aims for the utmost throughput, identifying the most suitable offloading strategy within a specified search space. It utilizes methods like model compression and sparsification to execute inference for models with hundreds of billions of parameters on consumer-grade hosts.
+FlexGen[1] aims for the utmost throughput, identifying the most suitable offloading strategy within a specified search space. It utilizes methods like model compression and sparsification to execute inference for models with hundreds of billions of parameters on consumer-grade hosts.
+FlexGen can be flexibly configured under various hardware resource constraints by aggregating memory and computation from the GPU, CPU, and disk. Through a linear programming optimizer, it searches for the best pattern to store and access the tensors, including weights, activations, and attention key/value (KV) cache. FlexGen further compresses both weights and KV cache to 4 bits with negligible accuracy loss.
+
+One key idea of FlexGen is to play the latency-throughput trade-off. Achieving low latency is inherently challenging for offloading methods, but the I/O efficiency of offloading can be greatly boosted for throughput-oriented scenarios (see the figure above). FlexGen utilizes a block schedule to reuse weight and overlap I/O with computation, as shown in figure (b) below, while other baseline systems use an inefficient row-by-row schedule, as shown in figure (a) below.
+\begin{figure}[htbp]
+    \centerline{\includegraphics[width=0.5\textwidth]{device fig2.jpg}}
+    \caption{two defferent schedules. The red arrows donate the computation order}
+    \label{fig}
+\end{figure}
+
 \subsubsection{PowerInfer}
-PowerInfer partitions neurons into hot and cold neurons based on predictors. During inference, hot neurons are computed on the GPU, while cold neurons are processed on the CPU.
+PowerInfer[2] partitions neurons into hot and cold neurons based on predictors. During inference, hot neurons are computed on the GPU, while cold neurons are processed on the CPU.
 PowerInfer's core idea is essentially sparsity, built upon the fact that only a small portion of neurons are active during the neural network inference process, while the majority remain inactive. Dejavu experiments have verified that over 80\% of neurons and over 95\% of MLP parameters can be excluded from inference. This implies that a subset of neurons can produce results similar to those of the entire large model. Therefore, placing cold neurons on the CPU for computation would not significantly affect the inference results, as long as the active neurons are computed effectively. Additionally, since cold and hot neurons are pre-determined, the data exchange and communication overhead during inference would be considerably reduced.
 \begin{figure}[htbp]
     \centerline{\includegraphics[width=0.5\textwidth]{device fig1.png}}
