@@ -58,13 +58,13 @@ This section primarily focuses on the Attention algorithm, which essentially inv
 \subsubsection{PagedAttention}
 In long-sequence inference, the KV cache accumulates a significant amount of contextual information regarding keys and values, resulting in substantial memory consumption that dynamically fluctuates, akin to memory allocation challenges encountered in operating systems. Classic OS memory management techniques, like virtual memory and paging, effectively mitigate unnecessary memory usage, enhancing memory utilization. These principles can inform the design of LLMs.
 
-Within the Transformer architecture and its derivatives, the attention mechanism serves as a crucial component for enabling the model to comprehend the relationships among input data. Consequently, integrating paging concepts, like paging the KV cache, should be contemplated within the Attention algorithm. The PagedAttention algorithm[1], proposed by Woosuk Kwon and colleagues, offers an illustrative implementation method. Leveraging this insight, vLLM, a service system tailored for LLMs, has been developed.
+Within the Transformer architecture and its derivatives, the attention mechanism serves as a crucial component for enabling the model to comprehend the relationships among input data. Consequently, integrating paging concepts, like paging the KV cache, should be contemplated within the Attention algorithm. The PagedAttention algorithm \cite{b1}, proposed by Woosuk Kwon and colleagues, offers an illustrative implementation method. Leveraging this insight, vLLM, a service system tailored for LLMs, has been developed.
 
 vLLM is based on the PagedAttention algorithm. The strategy of PagedAttention involves dividing the KV cache of each sequence into multiple blocks, each containing a certain number of tokens' keys and values. For each request to the KV cache, multiple non-contiguous blocks can be allocated. Figure 1 illustrates the storage method of keys and values in the KV cache under the PagedAttention algorithm, while also demonstrating the computation of Query and Key under this storage format.
 
 \begin{figure}[htbp]
     \centerline{\includegraphics[width=0.5\textwidth]{process figM1.png}}
-    \caption{The block storage in the PagedAttention [2]}
+    \caption{The block storage in the PagedAttention \cite{b1}}
     \label{fig}
 \end{figure}
 
@@ -87,11 +87,11 @@ vLLM's design is highly suitable for integration with distributed storage system
 \subsubsection{Tree Attention}
 In traditional LLMs, keys and values for each output sequence are independently calculated and stored in a kv cache, lacking effective data sharing among sequences with the same prefixes. We can envision tokens as nodes in a tree, facilitating sharing and reuse of computed k and v values during generation.
 
-An example of this idea's application is the SpecInfer engine[3], which employs a "Small Speculative Model" (SSM) for tentative speculative inference, depicted in Figure 2. Efficient tree decoding operators enable parallelized inference, and verified paths are output as the model's inference result sequence.
+An example of this idea's application is the SpecInfer engine \cite{b2}, which employs a "Small Speculative Model" (SSM) for tentative speculative inference, depicted in Figure 2. Efficient tree decoding operators enable parallelized inference, and verified paths are output as the model's inference result sequence.
 
 \begin{figure}[htbp]
     \centerline{\includegraphics[width=0.5\textwidth]{process figM2.png}}
-    \caption{An overview of SpecInfer's tree based speculative inference and verification mechanism [4]}
+    \caption{An overview of SpecInfer's tree based speculative inference and verification mechanism \cite{b2}}
     \label{fig}
 \end{figure}
 
@@ -109,7 +109,7 @@ In the description above, the term "memory" has two different meanings. The firs
 \subsubsection{Background}
 With the development of LLMs, the datasets they rely on have become increasingly vast, and the input they process has become more verbose. When faced with massive amounts of input data, the model's original context-linking capabilities might experience a "forgetting" phenomenon, which is the loss of crucial historical information. To address this issue, memory modules were developed. These modules have become effective tools for handling long-term dependencies, enhancing understanding of context, and improving memory of past information.
 
-There are several main types of memory modules in LLMs. The following will provide a detailed analysis of a specific memory module design called “Self-Controlled Memory System”(SCM)[5].
+There are several main types of memory modules in LLMs. The following will provide a detailed analysis of a specific memory module design called “Self-Controlled Memory System”(SCM) \cite{b3}.
 
 \subsubsection{Implementation and Benefits of SCM}
 The SCM system optimizes LLM processing and responsiveness, particularly in memory management. It efficiently stores structured memory items like interaction indices, observations, responses, summaries, and embeddings using caching and vector databases. Memories are categorized into Activation Memory for historical data and Flash Memory for recent interactions, allowing flexible memory utilization.
@@ -361,10 +361,8 @@ citation first, followed by the original foreign-language citation \cite{b6}.
 
 \begin{thebibliography}{00}
     \bibitem{b1} Kwon W, Li Z, Zhuang S, et al. Efficient memory management for large language model serving with pagedattention[C]//Proceedings of the 29th Symposium on Operating Systems Principles. 2023: 611-626.
-    \bibitem{b2} Kwon W, Li Z, Zhuang S, et al. Efficient memory management for large language model serving with pagedattention[C]//Proceedings of the 29th Symposium on Operating Systems Principles. 2023: 611-626. Page 615 Figure 5.
-    \bibitem{b3} Miao X, Oliaro G, Zhang Z, et al. SpecInfer: Accelerating Large Language Model Serving with Tree-based Speculative Inference and Verification[C]//Proceedings of the 29th ACM International Conference on Architectural Support for Programming Languages and Operating Systems, Volume 3. 2024: 932-949.
-    \bibitem{b4} Miao X, Oliaro G, Zhang Z, et al. SpecInfer: Accelerating Large Language Model Serving with Tree-based Speculative Inference and Verification[C]//Proceedings of the 29th ACM International Conference on Architectural Support for Programming Languages and Operating Systems, Volume 3. 2024: 932-949. Page 935 Figure 2.
-    \bibitem{b5} Wang B, Liang X, Yang J, et al. Enhancing large language model with self-controlled memory framework[J]. arXiv e-prints, 2023: arXiv: 2304.13343.
+    \bibitem{b2} Miao X, Oliaro G, Zhang Z, et al. SpecInfer: Accelerating Large Language Model Serving with Tree-based Speculative Inference and Verification[C]//Proceedings of the 29th ACM International Conference on Architectural Support for Programming Languages and Operating Systems, Volume 3. 2024: 932-949.
+    \bibitem{b3} Wang B, Liang X, Yang J, et al. Enhancing large language model with self-controlled memory framework[J]. arXiv e-prints, 2023: arXiv: 2304.13343.
 
     \bibitem{b10} G. Eason, B. Noble, and I. N. Sneddon, ``On certain integrals of Lipschitz-Hankel type involving products of Bessel functions,'' Phil. Trans. Roy. Soc. London, vol. A247, pp. 529--551, April 1955.
     \bibitem{b11} J. Clerk Maxwell, A Treatise on Electricity and Magnetism, 3rd ed., vol. 2. Oxford: Clarendon, 1892, pp.68--73.
