@@ -54,80 +54,87 @@ The Transformer model has achieved tremendous success in the field of Natural La
 The inference of LLMs is constrained by memory input/output (I/O) limitations rather than computational constraints. In other words, currently, the time required to load 1MB of data into the computing cores of a GPU is greater than the time these computing cores need to perform LLM computations on 1MB of data. This implies that the throughput of LLM inference is largely dependent on how much batch processing can be accommodated within the high-bandwidth GPU memory.
 \section{memory management}
 \subsection{Memory Optimization Based on the Attention Algorithm}
+This section primarily focuses on the Attention algorithm, which essentially involves optimizing memory management for the Key-Value (KV) cache.
 \subsubsection{PagedAttention}
-In long-sequence inference, the KV cache records a large amount of contextual information related to keys and values. Its memory consumption is substantial and dynamically increases or decreases, similar to the issues encountered in operating systems when allocating memory to processes. In classic operating system memory management methods, virtual memory and paging techniques can effectively reduce unnecessary memory usage, thereby improving memory utilization. The same principles can be applied to the design of LLMs.
+In long-sequence inference, the KV cache accumulates a significant amount of contextual information regarding keys and values, resulting in substantial memory consumption that dynamically fluctuates, akin to memory allocation challenges encountered in operating systems. Classic OS memory management techniques, like virtual memory and paging, effectively mitigate unnecessary memory usage, enhancing memory utilization. These principles can inform the design of LLMs.
 
-In the Transformer architecture and its variants, the attention mechanism is a key component that helps the model understand the relationships between input data. Based on this, incorporating paging concepts such as paging the KV cache should be considered within the Attention algorithm. A typical implementation method is the PagedAttention algorithm proposed by Woosuk Kwon and others (Efficient Memory Management for Large Language Model Serving with PagedAttention). Based on this, a service system for LLMs, known as vLLM, has been developed.
+Within the Transformer architecture and its derivatives, the attention mechanism serves as a crucial component for enabling the model to comprehend the relationships among input data. Consequently, integrating paging concepts, like paging the KV cache, should be contemplated within the Attention algorithm. The PagedAttention algorithm[1], proposed by Woosuk Kwon and colleagues, offers an illustrative implementation method. Leveraging this insight, vLLM, a service system tailored for LLMs, has been developed.
 
-vLLM is based on the PagedAttention algorithm. The strategy of PagedAttention involves dividing the KV cache of each sequence into multiple blocks, each containing a certain number of tokens' keys and values. For each request to the KV cache, multiple non-contiguous blocks can be allocated. (figure)
+vLLM is based on the PagedAttention algorithm. The strategy of PagedAttention involves dividing the KV cache of each sequence into multiple blocks, each containing a certain number of tokens' keys and values. For each request to the KV cache, multiple non-contiguous blocks can be allocated. Figure 1 illustrates the storage method of keys and values in the KV cache under the PagedAttention algorithm, while also demonstrating the computation of Query and Key under this storage format.
+
+\begin{figure}[htbp]
+    \centerline{\includegraphics[width=0.5\textwidth]{process figM1.png}}
+    \caption{The block storage in the PagedAttention [2]}
+    \label{fig}
+\end{figure}
 
 After dividing the KV cache, the original k and v values in the self-attention calculation formula are transformed into k and v vectors corresponding to the blocks in which they are stored. The formula is modified as follows:
 
-vLLM employs block-level memory management and preemptive request scheduling, both of which are co-designed with PagedAttention. A request’s KV cache is represented as a series of logical KV blocks, filled from left to right as new tokens and their KV cache are generated. Just like the page table in operating system, the KV block manager maintains block tables—the mapping between logical and physical KV blocks of each request. Each block table entry records the corresponding physical blocks of a logical block and the number of filled positions. Thus, with logical block number, physical block number and block table, vLLM can dynamically allocate the KV cache memory to certain request. Moreover, the vLLM’s block table has a “filled” record for each block, which represents the number of tokens in that block. If the “filled” record does not equal the maximum capacity that each block can accommodate, then when the key and value of a new token need to be added to the KV cache, the system will first attempt to fill any vacancies in the previous block. If there are no vacancies, a new physical block will be allocated to the next logical block.
+\[a_{ij} = \frac{\exp(q_i^{T} \cdot k_j / \sqrt{d})}{\sum_{t=1}^{i} \exp(q_i^{T} \cdot k_t / \sqrt{d})}, \quad o_i = \sum_{j=1}^{i} a_{ij} v_j\]
 
-The concept of partitioning the KV cache, inspired by paging and virtual memory in operating systems, allows for similar benefits in optimizing KV cache storage space: by allocating storage in blocks, the space can be non-contiguous, eliminating the external fragmentation caused by contiguous storage. Furthermore, when a request starts or finishes generation, KV blocks can be dynamically allocated and reclaimed, facilitating dynamic memory allocation.
+\[A_{ij} = \frac{\exp(q_i^{T} \cdot K_j / \sqrt{d})}{\sum_{t=1}^{\lceil {i/B} \rceil} \exp(q_i^{T} \cdot K_t1 / \sqrt{d})}, \quad o_i = \sum_{j=1}^{\lceil {i/B} \rceil} V_j A_{ij}^{T}\]
 
-Additionally, dividing the KV cache into blocks for computation enables the PagedAttention kernel to process the KV cache in parallel across multiple positions, thereby enhancing hardware utilization and reducing latency.
+vLLM employs block-level memory management and preemptive request scheduling, both of which are co-designed with PagedAttention. A request’s KV cache is represented as a series of logical KV blocks, filled from left to right as new tokens and their KV cache are generated. Just like the page table in operating system, the KV block manager maintains block tables. Each block table entry records the corresponding physical blocks of a logical block and the number of filled positions. Moreover, the vLLM’s block table has a “filled” record for each block, which represents the number of tokens in that block. If the “filled” record does not equal the maximum capacity that each block can accommodate, then when the key and value of a new token need to be added to the KV cache, the system will first attempt to fill any vacancies in the previous block.
 
-\subsubsection{Analysis: Combination of vLLM and distributed storage}
+The concept of partitioning the KV cache allows for similar benefits in optimizing KV cache storage space: the space can be non-contiguous, eliminating the external fragmentation caused by contiguous storage. Additionally, the “filled” records also maximize the utilization of each block to a certain extent, thereby reducing internal fragmentation. Moreover, the PagedAttention kernel can process the KV cache in parallel across multiple positions, thereby enhancing hardware utilization and reducing latency.
+
+\subsubsection{Self-Analysis: Combination of vLLM and distributed storage}
 In vLLM, using a centralized scheduler to coordinate parallel model execution is crucial. This strategy ensures that each model shard can efficiently handle the tasks assigned to it. In this setup, although each GPU processes a part of the entire input, all GPUs still need to access the same set of KV cache data. Therefore, vLLM adopts a centrally managed single KV cache manager to synchronize and share critical data across all computing nodes.
 
 vLLM's design is highly suitable for integration with distributed storage systems, offering the some key advantages: vLLM can implement block allocation and dynamic management of the KV cache. When integrated with distributed storage systems, this architecture can leverage the storage system's dynamic resource allocation capabilities, automatically expanding or contracting storage resources as needed. This not only improves memory utilization but also increases the system's total storage capacity. It also helps to store data close to the computing resources that use this data, thereby reducing data transmission times and enhancing overall processing speed. Moreover, this combination can utilize advanced data backup and fault tolerance mechanisms. In the event of a single node or device failure, the system can automatically recover KV cache data from backups.
 
 
-
 \subsubsection{Tree Attention}
-In traditional long-term language models (LLMs), the keys (k) and values (v) for each output sequence are calculated independently and stored in a kv cache. This method does not effectively utilize the potential data sharing among sequences with the same prefixes. Given that LLMs process tokens sequentially, we can envision each token as a node in a tree, with all potential subsequent tokens as its children. This tree-like structure would facilitate the sharing and reuse of previously computed k and v values during generation, thus enhancing efficiency and reducing memory consumption.
+In traditional LLMs, keys and values for each output sequence are independently calculated and stored in a kv cache, lacking effective data sharing among sequences with the same prefixes. We can envision tokens as nodes in a tree, facilitating sharing and reuse of computed k and v values during generation.
 
-A typical example of the application of this idea is the SpecInfer "Speculative Inference" engine.(SpecInfer: Accelerating Large Language Model Serving with Tree-based Speculative Inference and Verification by Xupeng Miao et al. ) It utilizes a "Small Speculative Model" (SSM), which is much less computationally expensive than an LLM, to perform speculative inference in a tentative manner, carrying out multi-step reasoning. The inference results of the SSM are aggregated into a Speculated Token Tree, which is then verified by the LLM. Efficient tree decoding operators enable parallelized inference, and the paths that are verified are output as the inference result sequence of the model. During this process, sequences with the same prefix can utilize their common ancestors in the tree to share k,v values.
+An example of this idea's application is the SpecInfer engine[3], which employs a "Small Speculative Model" (SSM) for tentative speculative inference, depicted in Figure 2. Efficient tree decoding operators enable parallelized inference, and verified paths are output as the model's inference result sequence.
 
-Before performing Tree Attention, SpecInfer decomposes the sentence into multiple tokens and utilizes the SSM to construct candidate token sequences layer by layer, starting from the root node.
+\begin{figure}[htbp]
+    \centerline{\includegraphics[width=0.5\textwidth]{process figM2.png}}
+    \caption{An overview of SpecInfer's tree based speculative inference and verification mechanism [4]}
+    \label{fig}
+\end{figure}
 
-During the validation process of Tree Attention, the accuracy of each candidate token sequence must be verified. Tree Attention calculates the probability scores for sequences formed by appending each possible subsequent token to the current prefix. Using this method, SpecInfer achieves parallel verification of multiple tokens. Starting from the tree's root node, each layer's computation can reuse the k and v values calculated in the previous layers. As a result, the KV cache does not store duplicate k and v values for the same tokens, significantly reducing memory consumption.
+Before Tree Attention, SpecInfer breaks down sentences into tokens and utilizes SSM to construct candidate token sequences layer by layer from the root node.
 
-DFS (Depth-First Search) is an algorithm for traversing tree structures. It starts at the root node and explores along a branch down to a leaf, then backtracks to an earlier node to continue exploring other branches. In SpecInfer, DFS is employed to verify candidate token sequences within a token tree. Specifically, starting from the root, DFS systematically traverses the entire token tree layer by layer, verifying whether each node's candidate token sequence is consistent with the output of LLM. By utilizing DFS, SpecInfer efficiently verifies the entire token tree, ensuring the high quality of the generated results.
+During Tree Attention validation, each candidate token sequence's accuracy must be verified. It calculates probability scores for sequences by appending possible subsequent tokens to the current prefix, achieving parallel verification of multiple tokens. This method allows reuse of k and v values in each layer's computation, reducing memory consumption by avoiding duplicate storage.
 
-By integrating Tree Attention with DFS, redundant KV cache allocations caused by multiple output sequences sharing the same prefixes can be effectively eliminated, significantly improving memory utilization. Moreover, this approach enables parallel processing of tokens, thereby enhancing computational efficiency.
-\subsubsection{Token Attention}
-In Long-Term Language Models (LLMs), memory resources are allocated for the computation of each token. However, not all tokens are actively used at all times. The memory management for each token in LLMs is not sufficiently detailed, leading to unnecessary occupation of memory resources, which can affect the overall performance and efficiency of the system.
+Integrating Tree Attention with DFS effectively eliminates redundant KV cache allocations from multiple output sequences sharing the same prefixes, significantly enhancing memory utilization and computational efficiency.
 
-Based on this concept, the LightLLM model was designed(), which includes Token Attention that reduces memory usage by enabling more precise operations on each token.
-
-In traditional self-attention mechanisms, the queries, keys, and values for all tokens are computed simultaneously for the entire sequence. In contrast, in Token Attention, each token independently calculates its own query, key, and value, allowing the model to handle the relationships and interactions between different tokens more flexibly.
-
-The fine-grained management of Token Attention, compared to traditional Attention algorithms, is easier to implement in practice. It can effectively manage memory usage and reduce issues with memory fragmentation.
-
-\subsubsection{Summary}
+\subsubsection{Summary of Attention Algorithm}
 When employing memory optimization strategies based on attention mechanisms, the reduction in memory usage is often not significant, but there is usually a substantial increase in the inference time for LLMs. Essentially, this strategy involves trading time for space. Therefore, when implementing such optimizations, it is crucial to balance computational performance and memory efficiency, making decisions based on specific application requirements.
 
 \subsection{Memory Management in Long-Term Memory and Recall}
 In the description above, the term "memory" has two different meanings. The first "memory" refers to the computer's hardware resources, while the second "memory" refers to the recollection of key contextual information that LLMs need to retain when processing lengthy texts.
 \subsubsection{Background}
-With the development of large language models (LLMs), the datasets they rely on have become increasingly vast, and the input they process has become more verbose. When faced with massive amounts of input data, the model's original context-linking capabilities might experience a "forgetting" phenomenon, which is the loss of crucial historical information. To address this issue, memory modules were developed. These modules have become effective tools for handling long-term dependencies, enhancing understanding of context, and improving memory of past information.
+With the development of LLMs, the datasets they rely on have become increasingly vast, and the input they process has become more verbose. When faced with massive amounts of input data, the model's original context-linking capabilities might experience a "forgetting" phenomenon, which is the loss of crucial historical information. To address this issue, memory modules were developed. These modules have become effective tools for handling long-term dependencies, enhancing understanding of context, and improving memory of past information.
 
-There are several main types of memory modules in LLMs, including Long Short-Term Memory networks (LSTM), Neural Turing Machines (NTM), Differentiable Neural Computers (DNC), and others. The following will provide a detailed analysis of a specific memory module design called “Self-Controlled Memory System”(SCM).
+There are several main types of memory modules in LLMs. The following will provide a detailed analysis of a specific memory module design called “Self-Controlled Memory System”(SCM)[5].
 
-Enhancing Large Language Model with Self-Controlled Memory Framework（Bing Wang）
+\subsubsection{Implementation and Benefits of SCM}
+The SCM system optimizes LLM processing and responsiveness, particularly in memory management. It efficiently stores structured memory items like interaction indices, observations, responses, summaries, and embeddings using caching and vector databases. Memories are categorized into Activation Memory for historical data and Flash Memory for recent interactions, allowing flexible memory utilization.
 
-\subsubsection{Analysis of SCM}
-The SCM system, comprising the language model agent, memory stream, and memory controller, optimizes LLM processing and responsiveness. The memory stream employs caching (e.g., Redis) and vector databases (e.g., Pinecone) for accelerated data access, facilitating structured storage of memory items such as interaction indices, observations, system responses, summaries, and embeddings for efficient data retrieval. It categorizes memories into Activation Memory for historical data and Flash Memory for recent interactions, enabling flexible memory utilization.
+Memory Activation in the Memory Controller relies on prompts to activate historical memories based on the model's response to current observations. Memories are retrieved and ranked by recency and relevance scores computed from cosine similarity between query and memory embeddings. Only the top k memories (3 to 10) are activated, ensuring pertinent and recent memories are utilized.
 
-In the Memory Controller, Memory Activation relies on prompts to determine the activation of historical memories based on the model's response to current observations. Memories are retrieved using observations as queries, ranked by recency and relevance scores computed from cosine similarity between query and memory embeddings. The top k memories (3 to 10) are activated, ensuring only pertinent and recent memories are utilized.
+Summaries are employed to represent memories if activated memory tokens exceed 2000 and memory length exceeds 800 tokens, reducing data processing volume and maintaining the model within its maximum input length capacity.
 
-Summaries are employed to address user queries when activated memory tokens exceed 2000 and memory length exceeds 800 tokens. If a summary suffices to answer the query, it represents the memory, reducing data processing volume and ensuring the model remains within its maximum input length capacity.
-
+\subsubsection{Personal Extended Ideas}
 Given the extensive range of memory module designs in LLMs, I have not yet fully explored all these designs. Based on my current knowledge and preliminary understanding of this field, here are some of my thoughts and ideas on memory optimization.
+
 Eviction Policies:
+
 Implementing eviction mechanisms to remove memories that have not been used for an extended period can effectively reduce space consumption. This strategy is analogous to cache eviction algorithms in computer systems and allows for dynamic memory management, ensuring operational efficiency.
-Distributed Memory Modules:
-Applying memory modules in a distributed system to enable shared memory across multiple nodes can enhance the effects of parallel processing when handling large-scale data. This shared approach alleviates the load on individual nodes and accelerates data processing, particularly useful in environments with high concurrency demands.
-Paging Mechanism:
-Employing a paging mechanism to manage the storage of memory contents allows for dynamic memory allocation and the use of virtual memory. This method increases the utilization and flexibility of memory resources, enabling the efficient storage and management of extensive memory data even under physical memory constraints.
+
 Memory Pooling:
+
 Manage memory allocations using memory pools to reduce the overhead associated with frequent memory allocation and deallocation. Memory pools pre-allocate a large block of memory and dynamically allocate or reclaim memory from this block as needed.
+
 Garbage Collection Optimization:
-Optimize garbage collection (GC) mechanisms to minimize their impact on system performance. By improving GC algorithms, such as incremental GC, parallel GC, or real-time GC, memory can be managed more effectively without sacrificing response times.
+
+Optimize garbage collection (GC) mechanisms to minimize their impact on system performance. By improving GC algorithms, memory can be managed more effectively without sacrificing response times.
+
 Heterogeneous Storage Strategies:
+
 Employ a combination of different types of storage media (e.g., RAM, SSD, HDD) to store data with varying access frequencies. Frequently accessed "hot" data can be stored on faster media like RAM, while "cold" data can be placed on lower-cost media like HDD.
 
 
@@ -282,6 +289,12 @@ For papers published in translation journals, please give the English
 citation first, followed by the original foreign-language citation \cite{b6}.
 
 \begin{thebibliography}{00}
+    \bibitem{b1} Kwon W, Li Z, Zhuang S, et al. Efficient memory management for large language model serving with pagedattention[C]//Proceedings of the 29th Symposium on Operating Systems Principles. 2023: 611-626.
+    \bibitem{b2} Kwon W, Li Z, Zhuang S, et al. Efficient memory management for large language model serving with pagedattention[C]//Proceedings of the 29th Symposium on Operating Systems Principles. 2023: 611-626. Page 615 Figure 5.
+    \bibitem{b3} Miao X, Oliaro G, Zhang Z, et al. SpecInfer: Accelerating Large Language Model Serving with Tree-based Speculative Inference and Verification[C]//Proceedings of the 29th ACM International Conference on Architectural Support for Programming Languages and Operating Systems, Volume 3. 2024: 932-949.
+    \bibitem{b4} Miao X, Oliaro G, Zhang Z, et al. SpecInfer: Accelerating Large Language Model Serving with Tree-based Speculative Inference and Verification[C]//Proceedings of the 29th ACM International Conference on Architectural Support for Programming Languages and Operating Systems, Volume 3. 2024: 932-949. Page 935 Figure 2.
+    \bibitem{b5} Wang B, Liang X, Yang J, et al. Enhancing large language model with self-controlled memory framework[J]. arXiv e-prints, 2023: arXiv: 2304.13343.
+
     \bibitem{b1} G. Eason, B. Noble, and I. N. Sneddon, ``On certain integrals of Lipschitz-Hankel type involving products of Bessel functions,'' Phil. Trans. Roy. Soc. London, vol. A247, pp. 529--551, April 1955.
     \bibitem{b2} J. Clerk Maxwell, A Treatise on Electricity and Magnetism, 3rd ed., vol. 2. Oxford: Clarendon, 1892, pp.68--73.
     \bibitem{b3} I. S. Jacobs and C. P. Bean, ``Fine particles, thin films and exchange anisotropy,'' in Magnetism, vol. III, G. T. Rado and H. Suhl, Eds. New York: Academic, 1963, pp. 271--350.
