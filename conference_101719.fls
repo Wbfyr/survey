@@ -443,9 +443,9 @@ INPUT conference_101719.aux
 INPUT conference_101719.aux
 OUTPUT conference_101719.aux
 OUTPUT conference_101719.xdv
-INPUT ./process fig1.png
-INPUT ./process fig1.png
-INPUT process fig1.png
+INPUT ./process figM1.png
+INPUT ./process figM1.png
+INPUT process figM1.png
 INPUT d:/texlive/2023/texmf-dist/fonts/tfm/public/cm/cmmi10.tfm
 INPUT d:/texlive/2023/texmf-dist/fonts/tfm/public/cm/cmsy10.tfm
 INPUT d:/texlive/2023/texmf-dist/fonts/tfm/public/cm/cmex10.tfm
@@ -466,12 +466,21 @@ INPUT d:/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm10.tfm
 INPUT d:/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm7.tfm
 INPUT d:/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm5.tfm
 INPUT d:/texlive/2023/texmf-dist/fonts/tfm/public/cm/cmr10.tfm
+INPUT ./process figM2.png
+INPUT ./process figM2.png
+INPUT process figM2.png
+INPUT ./process fig1.png
+INPUT ./process fig1.png
+INPUT process fig1.png
 INPUT ./process fig4.png
 INPUT ./process fig4.png
 INPUT process fig4.png
 INPUT ./process fig5.png
 INPUT ./process fig5.png
 INPUT process fig5.png
+INPUT ./device fig2.jpg
+INPUT ./device fig2.jpg
+INPUT device fig2.jpg
 INPUT ./device fig1.png
 INPUT ./device fig1.png
 INPUT device fig1.png
