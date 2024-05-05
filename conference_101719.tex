@@ -1,7 +1,6 @@
 \documentclass[conference]{IEEEtran}
 \IEEEoverridecommandlockouts
 % The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
-\usepackage{ctex}
 \usepackage{algorithm}
 \usepackage[noend]{algpseudocode}
 \usepackage{cite}
@@ -17,15 +16,15 @@
     \thanks{Identify applicable funding agency here. If none, delete this.}
 }
 
-\author{\IEEEauthorblockN{{\kaishu 朱徐洲}}
+\author{\IEEEauthorblockN{Xuzhou Zhu}
     \IEEEauthorblockA{522031910324}
     \IEEEauthorblockA{zhuxuzhou@sjtu.edu.cn}
     \and
-    \IEEEauthorblockN{{\kaishu 庞皓阳}}
+    \IEEEauthorblockN{Haoyang Pang}
     \IEEEauthorblockA{522031910050}
     \IEEEauthorblockA{1271362703@sjtu.edu.cn}
     \and
-    \IEEEauthorblockN{{\kaishu 卢晗宇}}
+    \IEEEauthorblockN{Hanyu Lu}
     \IEEEauthorblockA{522031910043}
     \IEEEauthorblockA{lhy-2785.fanyang@sjtu.edu.cn}
 }
@@ -273,7 +272,7 @@ However, the major drawback of this method lies in the central GPU, as its memor
 
 With DDP, the most significant structural change is the elimination of the central GPU, thus achieving true distributed effects. To achieve this, we must first introduce a communication method: ring All-Reduce.
 
-Allreduce: a sum or average of partitioned data which is then shared back to the cluster nodes.(https://arxiv.org/pdf/1312.3020)In the framework of ring All-Reduce, each GPU holds an equal status, where each GPU only receives data from its left neighbor and sends data to its right neighbor. The entire ring All-Reduce algorithm consists of two steps:
+Allreduce \cite{b22} : a sum or average of partitioned data which is then shared back to the cluster nodes. In the framework of ring All-Reduce, each GPU holds an equal status, where each GPU only receives data from its left neighbor and sends data to its right neighbor. The entire ring All-Reduce algorithm consists of two steps:
 1) scatter-reduce. This step gradually exchanges and merges gradients with each other, resulting in each GPU holding a part of the fully merged gradient. 2) all-gather. This step involves the gradual exchange of incomplete merged gradients, eventually ensuring that all GPUs possess the complete merged gradient.
 The entire architecture forms a ring, where information flows cyclically. This enables the successful interaction and merging of all information, hence the term "ring All-Reduce". The theoretical data transmission volume is 2(N−1)×K/N​, where N is the number of GPUs and K is the total data volume per device. The data transferred approaches 2K, while K×N represents the total data volume. Thus, with an increasing number of GPUs, ring All-Reduce can achieve linear scaling.
 
@@ -308,56 +307,30 @@ Offloading is one aspect to reduce computation and storage resources for LLM inf
 Let's delve into two models specifically designed for offloading:
 
 \subsubsection{Flexgen}
-FlexGen \cite{b20} aims for the utmost throughput, identifying the most suitable offloading strategy within a specified search space. It utilizes methods like model compression and sparsification to execute inference for models with hundreds of billions of parameters on consumer-grade hosts.
+FlexGen\cite{b20} aims for the utmost throughput, identifying the most suitable offloading strategy within a specified search space. It utilizes methods like model compression and sparsification to execute inference for models with hundreds of billions of parameters on consumer-grade hosts.
 FlexGen can be flexibly configured under various hardware resource constraints by aggregating memory and computation from the GPU, CPU, and disk. Through a linear programming optimizer, it searches for the best pattern to store and access the tensors, including weights, activations, and attention key/value (KV) cache. FlexGen further compresses both weights and KV cache to 4 bits with negligible accuracy loss.
 
-One key idea of FlexGen is to play the latency-throughput trade-off. Achieving low latency is inherently challenging for offloading methods, but the I/O efficiency of offloading can be greatly boosted for throughput-oriented scenarios (see the figure above). FlexGen utilizes a block schedule to reuse weight and overlap I/O with computation, as shown in figure (b) below, while other baseline systems use an inefficient row-by-row schedule, as shown in figure (a) below.
+One key idea of FlexGen is to play the latency-throughput trade-off. Achieving low latency is inherently challenging for offloading methods, but the I/O efficiency of offloading can be greatly boosted for throughput-oriented scenarios . FlexGen utilizes a block schedule to reuse weight and overlap I/O with computation, as shown in figure \ref{device fig1}(b) below, while other baseline systems use an inefficient row-by-row schedule, as shown in figure \ref{device fig1}(a) below.
 \begin{figure}[htbp]
     \centerline{\includegraphics[width=0.5\textwidth]{device fig2.jpg}}
     \caption{two defferent schedules. The red arrows donate the computation order}
-    \label{fig}
+    \label{device fig1}
 \end{figure}
 
 \subsubsection{PowerInfer}
-PowerInfer[2] partitions neurons into hot and cold neurons based on predictors. During inference, hot neurons are computed on the GPU, while cold neurons are processed on the CPU.
-PowerInfer's core idea is essentially sparsity, built upon the fact that only a small portion of neurons are active during the neural network inference process, while the majority remain inactive. Dejavu experiments have verified that over 80\% of neurons and over 95\% of MLP parameters can be excluded from inference. This implies that a subset of neurons can produce results similar to those of the entire large model. Therefore, placing cold neurons on the CPU for computation would not significantly affect the inference results, as long as the active neurons are computed effectively. Additionally, since cold and hot neurons are pre-determined, the data exchange and communication overhead during inference would be considerably reduced.
+PowerInfer\cite{b21} partitions neurons into hot and cold neurons based on predictors. During inference, hot neurons are computed on the GPU, while cold neurons are processed on the CPU.
+PowerInfer's core idea is essentially sparsity, built upon the fact that only a small portion of neurons are active during the neural network inference process, while the majority remain inactive. Dejavu experiments have verified that over 80\% of neurons and over 95\% of MLP parameters can be excluded from inference\cite{b23}. This implies that a subset of neurons can produce results similar to those of the entire large model. Therefore, placing cold neurons on the CPU for computation would not significantly affect the inference results, as long as the active neurons are computed effectively. Additionally, since cold and hot neurons are pre-determined, the data exchange and communication overhead during inference would be considerably reduced.
+figure \ref{device fig2} illustrates the logical structure of PowerInfer.
 \begin{figure}[htbp]
     \centerline{\includegraphics[width=0.5\textwidth]{device fig1.png}}
     \caption{The architecture overview and inference workflow of PowerInfer.}
-    \label{fig}
+    \label{device fig2}
 \end{figure}
 The final implementation of PowerInfer has shown remarkable effectiveness. When compared with llama.cpp across various models such as Opt 66B, Opt 175B, Falcon 40B, and Llama 70B, it has achieved several-fold acceleration for different output lengths and data precisions.
 
 PowerInfer's approach is novel, particularly in its prediction of cold and hot neurons, which offers an innovative perspective. The demonstration results are quite impressive, showcasing significant speed improvements. However, the practicality of this approach still needs improvement. Its model adaptability is somewhat cumbersome, as it is only suitable for models using the ReLU activation function. Models utilizing SILU activation require fine-tuning for a ReLU version. Additionally, this method is lossy, which raises questions about its compatibility with further developments in quantization. Whether PowerInfer can coexist with quantization is also a worthwhile consideration.
 
 \section*{Acknowledgment}
-
-
-The preferred spelling of the word ``acknowledgment'' in America is without
-an ``e'' after the ``g''. Avoid the stilted expression ``one of us (R. B.
-G.) thanks $\ldots$''. Instead, try ``R. B. G. thanks$\ldots$''. Put sponsor
-acknowledgments in the unnumbered footnote on the first page.
-
-\section*{References}
-
-Please number citations consecutively within brackets \cite{b1}. The
-sentence punctuation follows the bracket \cite{b2}. Refer simply to the reference
-number, as in \cite{b3}---do not use ``Ref. \cite{b3}'' or ``reference \cite{b3}'' except at
-the beginning of a sentence: ``Reference \cite{b3} was the first $\ldots$''
-
-Number footnotes separately in superscripts. Place the actual footnote at
-the bottom of the column in which it was cited. Do not put footnotes in the
-abstract or reference list. Use letters for table footnotes.
-
-Unless there are six authors or more give all authors' names; do not use
-``et al.''. Papers that have not been published, even if they have been
-submitted for publication, should be cited as ``unpublished'' \cite{b4}. Papers
-that have been accepted for publication should be cited as ``in press'' \cite{b5}.
-Capitalize only the first word in a paper title, except for proper nouns and
-element symbols.
-
-For papers published in translation journals, please give the English
-citation first, followed by the original foreign-language citation \cite{b6}.
 
 \begin{thebibliography}{00}
     \bibitem{b1} Kwon W, Li Z, Zhuang S, et al. Efficient memory management for large language model serving with pagedattention[C]//Proceedings of the 29th Symposium on Operating Systems Principles. 2023: 611-626.
@@ -374,6 +347,8 @@ citation first, followed by the original foreign-language citation \cite{b6}.
 
     \bibitem{b20}Sheng Y, Zheng L, Yuan B, et al. Flexgen: High-throughput generative inference of large language models with a single gpu[C]//International Conference on Machine Learning. PMLR, 2023: 31094-31116.
     \bibitem{b21}Song Y, Mi Z, Xie H, et al. Powerinfer: Fast large language model serving with a consumer-grade gpu[J]. arXiv preprint arXiv:2312.12456, 2023.
+    \bibitem{b22}Zhao H, Canny J. Sparse allreduce: Efficient scalable communication for power-law data[J]. arXiv preprint arXiv:1312.3020, 2013.
+    \bibitem{b23}Liu Z, Wang J, Dao T, et al. Deja vu: Contextual sparsity for efficient llms at inference time[C]//International Conference on Machine Learning. PMLR, 2023: 22137-22176.
 \end{thebibliography}
 \vspace{12pt}
 \color{red}
